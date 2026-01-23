@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>RFID Dashboard - FXR90</title>
+
+    <!-- Librería para generar Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0d1117;
+            color: #fff;
+            margin: 0;
+        }
+
+        header {
+            background: #161b22;
+            padding: 20px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            border-bottom: 2px solid #30363d;
+        }
+
+        #status {
+            margin-top: 8px;
+            font-size: 14px;
+        }
+
+        #status.connected { color: #4caf50; }
+        #status.disconnected { color: #f44336; }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            padding: 20px;
+            background: #161b22;
+            border-bottom: 2px solid #30363d;
+        }
+
+        select, button {
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: none;
+            font-size: 15px;
+        }
+
+        select {
+            background: #21262d;
+            color: white;
+        }
+
+        button {
+            background: #238636;
+            color: white;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #30363d;
+            text-align: left;
+        }
+
+        th {
+            background: #21262d;
+        }
+
+        tr:hover {
+            background: #30363d;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            gap: 10px;
+        }
+
+        .pagination button {
+            background: #30363d;
+        }
+
+        .container {
+            padding: 10px 20px;
+        }
+
+        .tag {
+            color: #58a6ff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    FXR90 RFID Dashboard
+    <div id="status" class="disconnected">Desconectado</div>
+</header>
+
+<div class="controls">
+    <div>
+        <label>Filtrar por antena:</label>
+        <select id="filter-antenna">
+            <option value="all">Todas</option>
+            <option value="1">Antena 1</option>
+            <option value="2">Antena 2</option>
+            <option value="3">Antena 3</option>
+            <option value="4">Antena 4</option>
+        </select>
+    </div>
+
+    <button onclick="exportExcel()">Exportar Excel</button>
+</div>
+
+<div class="container">
+    <table>
+        <thead>
+            <tr>
+                <th>EPC</th>
+                <th>Antena</th>
+                <th>RSSI</th>
+                <th>Hora</th>
+            </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+    </table>
+</div>
+
+<div class="pagination" id="pagination"></div>
+
+<script>
+    const WS_URL = "ws://localhost:4000";
+    const API_URL = "http://localhost:4000/events";
+
+    let events = [];
+    let filteredEvents = [];
+    let currentPage = 1;
+    const PAGE_SIZE = 20;
+
+    const statusIndicator = document.getElementById("status");
+    const tableBody = document.getElementById("table-body");
+    const filterAntenna = document.getElementById("filter-antenna");
+    const paginationDiv = document.getElementById("pagination");
+
+    filterAntenna.onchange = applyFilters;
+
+    // WebSocket
+    function connectWS() {
+        const socket = new WebSocket(WS_URL);
+
+        socket.onopen = () => {
+            statusIndicator.textContent = "Conectado";
+            statusIndicator.className = "connected";
+        };
+
+        socket.onclose = () => {
+            statusIndicator.textContent = "Desconectado (reintentando...)";
+            statusIndicator.className = "disconnected";
+            setTimeout(connectWS, 2000);
+        };
+
+        socket.onmessage = (msg) => {
+            const data = JSON.parse(msg.data);
+            events.unshift(data);
+            applyFilters();
+        };
+    }
+
+    connectWS();
+
+    // Cargar histórico automático
+    async function loadHistory() {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+        events = data;
+        applyFilters();
+    }
+
+    loadHistory();
+
+    // FILTROS
+    function applyFilters() {
+        const antenna = filterAntenna.value;
+
+        filteredEvents = events.filter(e =>
+            antenna === "all" ? true : String(e.antenna) === antenna
+        );
+
+        currentPage = 1;
+        renderTable();
+    }
+
+    // TABLA
+    function renderTable() {
+        tableBody.innerHTML = "";
+
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const end = start + PAGE_SIZE;
+
+        const pageItems = filteredEvents.slice(start, end);
+
+        pageItems.forEach(event => {
+            const row = `
+                <tr>
+                    <td class="tag">${event.epc}</td>
+                    <td>${event.antenna}</td>
+                    <td>${event.rssi}</td>
+                    <td>${new Date(event.timestamp).toLocaleTimeString()}</td>
+                </tr>
+            `;
+            tableBody.insertAdjacentHTML("beforeend", row);
+        });
+
+        renderPagination();
+    }
+
+    // PAGINACIÓN
+    function renderPagination() {
+        paginationDiv.innerHTML = "";
+
+        const totalPages = Math.ceil(filteredEvents.length / PAGE_SIZE);
+
+        for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement("button");
+            btn.textContent = i;
+            btn.style.background = i === currentPage ? "#238636" : "#30363d";
+            btn.onclick = () => {
+                currentPage = i;
+                renderTable();
+            };
+            paginationDiv.appendChild(btn);
+        }
+    }
+
+    // EXPORTAR EXCEL PROFESIONAL
+    // EXPORTAR EXCEL PROFESIONAL EN BLANCO Y NEGRO
+function exportExcel() {
+    if (filteredEvents.length === 0) {
+        alert("No hay datos para exportar.");
+        return;
+    }
+
+    const title = "Reporte de Lecturas RFID";
+    const date = "Generado: " + new Date().toLocaleString();
+
+    const headerRow = ["EPC", "Antena", "RSSI", "Hora"];
+
+    const dataRows = filteredEvents.map(e => [
+        e.epc,
+        e.antenna,
+        e.rssi,
+        new Date(e.timestamp).toLocaleString()
+    ]);
+
+    const wsData = [
+        [title],
+        [date],
+        [],
+        headerRow,
+        ...dataRows
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Fusionar celdas para título y fecha
+    ws["!merges"] = [
+        { s: { r:0, c:0 }, e: { r:0, c:3 } },
+        { s: { r:1, c:0 }, e: { r:1, c:3 } }
+    ];
+
+    // 🎨 Estilo blanco y negro para todo
+    const baseStyle = {
+        font: { bold: false, color: { rgb: "000000" }, sz: 12 },
+        fill: { fgColor: { rgb: "FFFFFF" } },
+        border: {
+            top:    { style: "thin", color: { rgb: "000000" }},
+            bottom: { style: "thin", color: { rgb: "000000" }},
+            left:   { style: "thin", color: { rgb: "000000" }},
+            right:  { style: "thin", color: { rgb: "000000" }}
+        }
+    };
+
+    // 🎨 Estilo para título
+    ws["A1"].s = {
+        font: { bold: true, sz: 20, color: { rgb: "000000" }},
+        alignment: { horizontal: "center" }
+    };
+
+    // 🎨 Estilo para fecha
+    ws["A2"].s = {
+        font: { bold: true, color: { rgb: "000000" }},
+        alignment: { horizontal: "center" }
+    };
+
+    // 🎨 Estilo encabezados en B/N
+    const headerStyle = {
+        font: { bold: true, color: { rgb: "000000" }},
+        fill: { fgColor: { rgb: "FFFFFF" }},
+        border: baseStyle.border,
+        alignment: { horizontal: "center" }
+    };
+
+    ["A4","B4","C4","D4"].forEach(cell => ws[cell].s = headerStyle);
+
+    // Estilos para todas las celdas de datos en blanco y negro
+    const totalRows = filteredEvents.length + 4;
+
+    for (let r = 5; r <= totalRows; r++) {
+        ["A","B","C","D"].forEach(col => {
+            const cell = ws[col + r];
+            if (!cell) return;
+            cell.s = baseStyle;
+        });
+    }
+
+    // AutoFilter
+    ws["!autofilter"] = { ref: "A4:D" + totalRows };
+
+    // Auto-ancho
+    ws["!cols"] = [
+        { wch: 35 },
+        { wch: 12 },
+        { wch: 10 },
+        { wch: 22 }
+    ];
+
+    // Crear archivo Excel
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte RFID");
+    XLSX.writeFile(wb, "Reporte_RFID.xlsx");
+}
+</script>
+
+</body>
+</html>
