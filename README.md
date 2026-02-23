@@ -52,9 +52,9 @@ Intervalo actual: **2.5 segundos**
 
 Interfaz web que permite:
 
-✔ Ver lecturas en tiempo real  
-✔ Cargar histórico automáticamente  
-✔ Filtrar por antena  
-✔ Paginación automática  
-✔ Exportar datos a Excel  
-✔ Reconexión automática al servidor  
+- Ver lecturas en tiempo real  
+- Cargar histórico automáticamente  
+- Filtrar por antena  
+- Paginación automática  
+- Exportar datos a Excel  
+- Reconexión automática al servidor  
