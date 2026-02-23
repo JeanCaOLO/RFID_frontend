@@ -1,12 +1,12 @@
-# 📡 FXR90 RFID Dashboard System
+#  FXR90 RFID Dashboard System
 
 Guía rápida para iniciar y usar el sistema de lecturas RFID.
 
 El sistema está compuesto por:
 
-✅ Servidor RFID  
-✅ Simulador de lecturas  
-✅ Dashboard web en tiempo real  
+- Servidor RFID  
+- Simulador de lecturas  
+- Dashboard web en tiempo real  
 
 ---
 
@@ -24,7 +24,7 @@ node server.js
 
 Si el servidor inició correctamente verás:
 
-📡 Servidor RFID en http://localhost:4000
+ Servidor RFID en http://localhost:4000
 
 El servidor queda escuchando lecturas RFID y enviando eventos en tiempo real.
 
@@ -58,7 +58,7 @@ Ejemplo de salida:
 
 Simulador RFID iniciado...
 Enviando lectura: { tagId: ..., rssi: ..., antennaPort: ... }
-🔄 Flujo de funcionamiento
+ Flujo de funcionamiento
 
 Una vez iniciado:
 
