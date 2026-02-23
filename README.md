@@ -1,4 +1,4 @@
-# 📡 FXR90 RFID Dashboard System
+# FXR90 RFID Dashboard System
 
 Sistema completo para recibir lecturas RFID, simular antenas y visualizar eventos en tiempo real.
 
