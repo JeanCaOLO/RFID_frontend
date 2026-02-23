@@ -1,60 +1,97 @@
-# FXR90 RFID Dashboard System
+# 📡 FXR90 RFID Dashboard System
 
-Sistema completo para recibir lecturas RFID, simular antenas y visualizar eventos en tiempo real.
+Guía rápida para iniciar y usar el sistema de lecturas RFID.
 
-Este proyecto incluye:
+El sistema está compuesto por:
 
- Servidor Node.js + WebSocket  
- Simulador de antena RFID  
- Dashboard web en tiempo real  
- Histórico y exportación a Excel  
-
----
-
-#  Componentes del sistema
-
-## 1 - Server (server.js)
-
-Servidor Node.js que:
-
-- Recibe lecturas RFID por HTTP
-- Guarda historial en memoria
-- Emite eventos en tiempo real por WebSocket
-- Sirve el dashboard web
-
-### Endpoints
-
-**POST /rfid**  
-Recibe lecturas RFID.
-
-**GET /events**  
-Devuelve el histórico.
-
-**WebSocket**  
-Transmite eventos en tiempo real.
+✅ Servidor RFID  
+✅ Simulador de lecturas  
+✅ Dashboard web en tiempo real  
 
 ---
 
-## 2️ - Simulador (simulador.js)
+# > Inicio rápido del flujo
 
-Simula una antena RFID FXR90:
-
-- Genera EPC aleatorios
-- RSSI realista
-- Antena aleatoria (1–4)
-- Envía lecturas automáticamente
-
-Intervalo actual: **2.5 segundos**
+Seguí estos pasos en orden.
 
 ---
 
-## 3️ - Dashboard (index.html)
+## 1️ - Iniciar el servidor
 
-Interfaz web que permite:
+Desde la carpeta del proyecto:
 
-- Ver lecturas en tiempo real  
-- Cargar histórico automáticamente  
-- Filtrar por antena  
-- Paginación automática  
-- Exportar datos a Excel  
-- Reconexión automática al servidor  
+node server.js
+
+Si el servidor inició correctamente verás:
+
+📡 Servidor RFID en http://localhost:4000
+
+El servidor queda escuchando lecturas RFID y enviando eventos en tiempo real.
+
+2️ -- Abrir el dashboard
+
+Con el servidor corriendo, abrir en el navegador:
+
+http://localhost:4000
+
+En pantalla verás:
+
+estado de conexión
+
+tabla de lecturas
+
+filtros y exportación
+
+Cuando esté conectado mostrará:
+
+Conectado
+
+3 - Iniciar el simulador RFID
+
+Abrir otra terminal y ejecutar:
+
+node simulador.js
+
+El simulador comenzará a enviar lecturas automáticamente.
+
+Ejemplo de salida:
+
+Simulador RFID iniciado...
+Enviando lectura: { tagId: ..., rssi: ..., antennaPort: ... }
+🔄 Flujo de funcionamiento
+
+Una vez iniciado:
+
+El simulador genera lecturas RFID.
+
+El servidor recibe las lecturas.
+
+El servidor guarda el historial.
+
+El servidor envía los eventos en tiempo real.
+
+El dashboard muestra las lecturas instantáneamente.
+
+ Qué deberías ver
+
+- Nuevas lecturas apareciendo en tiempo real
+- EPC, antena, RSSI y hora
+- Estado conectado en verde
+- Paginación automática
+- Filtro por antena funcional
+
+**⏹ Detener el sistema**
+
+Para detener:
+
+Presionar CTRL + C en la terminal del simulador.
+
+Presionar CTRL + C en la terminal del servidor.
+
+ ***Notas importantes***
+
+El servidor debe iniciarse antes que el simulador.
+
+Si el dashboard muestra “Desconectado”, verificar que el servidor esté corriendo.
+
+El histórico se mantiene mientras el servidor esté activo.
