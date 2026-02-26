@@ -17,6 +17,9 @@ function conectarWS() {
     ws = new WebSocket(SERVER_WS);
 
     ws.on("open", () => console.log("WS conectado al servidor"));
+    ws.on("error", (error) => {
+        console.log("WS error:", error.message || error);
+    });
     ws.on("close", () => {
         console.log("WS desconectado, reconectando...");
         setTimeout(conectarWS, 2000);

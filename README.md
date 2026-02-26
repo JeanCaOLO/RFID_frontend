@@ -10,7 +10,7 @@ El sistema está compuesto por:
 
 ---
 
-# > Inicio rápido del flujo
+# > Inicio rápido del flujo (React + Vite)
 
 Seguí estos pasos en orden.
 
@@ -20,7 +20,7 @@ Seguí estos pasos en orden.
 
 Desde la carpeta del proyecto:
 
-node server.js
+npm run server
 
 Si el servidor inició correctamente verás:
 
@@ -28,11 +28,13 @@ Si el servidor inició correctamente verás:
 
 El servidor queda escuchando lecturas RFID y enviando eventos en tiempo real.
 
-2️ -- Abrir el dashboard
+2️ -- Iniciar el dashboard
 
-Con el servidor corriendo, abrir en el navegador:
+npm run dev
 
-http://localhost:4000
+Abrir en el navegador:
+
+http://localhost:5173
 
 En pantalla verás:
 
@@ -50,7 +52,7 @@ Conectado
 
 Abrir otra terminal y ejecutar:
 
-node simulador.js
+npm run sim
 
 El simulador comenzará a enviar lecturas automáticamente.
 
