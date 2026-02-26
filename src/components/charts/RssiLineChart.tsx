@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -43,8 +43,22 @@ const getChartData = (
     .reverse();
 };
 
-export const RssiLineChart = ({ events }: { events: RFIDTagEvent[] }) => {
+type RssiLineChartProps = {
+  events: RFIDTagEvent[];
+  selectedAntenna?: number | "all";
+};
+
+export const RssiLineChart = ({
+  events,
+  selectedAntenna
+}: RssiLineChartProps) => {
   const [activeFilter, setActiveFilter] = useState<number | "all">("all");
+
+  useEffect(() => {
+    if (selectedAntenna !== undefined) {
+      setActiveFilter(selectedAntenna);
+    }
+  }, [selectedAntenna]);
   const data = useMemo(
     () => getChartData(events, activeFilter),
     [events, activeFilter]
@@ -78,7 +92,7 @@ export const RssiLineChart = ({ events }: { events: RFIDTagEvent[] }) => {
           })}
         </div>
       </div>
-      <div className="mt-4 h-64">
+      <div className="mt-4 h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
