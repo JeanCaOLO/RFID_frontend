@@ -63,12 +63,7 @@ export default function App() {
       <Header isConnected={isConnected} />
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pb-12">
-        <KpiGrid
-          totalReads={stats.totalReads}
-          uniqueTags={stats.uniqueTags}
-          peakRssi={stats.peakRssi}
-          topAntenna={stats.topAntenna}
-        />
+        <KpiGrid tags={events} />
 
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
           <RssiLineChart events={events} />

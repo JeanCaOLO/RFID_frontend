@@ -1,51 +1,91 @@
-import { Activity, SignalHigh, Radar } from "lucide-react";
+import { Activity, RadioTower, SignalHigh } from "lucide-react";
 
-type KpiGridProps = {
-  totalReads: number;
-  uniqueTags: number;
-  peakRssi: number;
-  topAntenna: number | null;
+type RFIDTag = {
+  epc: string;
+  antenna: number;
+  rssi: number;
+  timestamp: string;
 };
 
-const Card = ({
-  label,
-  value,
-  icon: Icon
-}: {
-  label: string;
-  value: string | number;
-  icon: typeof Activity;
-}) => (
-  <div className="rounded-2xl border border-white/10 bg-panel p-5 shadow-glow">
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-xs uppercase tracking-[0.35em] text-text/60">
-          {label}
-        </p>
-        <p className="mt-2 text-2xl font-semibold text-text">{value}</p>
-      </div>
-      <div className="rounded-full bg-primary/20 p-3 text-primary">
-        <Icon className="h-5 w-5" />
-      </div>
-    </div>
+type KpiGridProps = {
+  tags: RFIDTag[];
+};
+
+const CardBase = ({ children }: { children: React.ReactNode }) => (
+  <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-5 shadow-lg transition hover:border-sky-500/50">
+    <div className="flex items-start gap-4">{children}</div>
   </div>
 );
 
-export const KpiGrid = ({
-  totalReads,
-  uniqueTags,
-  peakRssi,
-  topAntenna
-}: KpiGridProps) => {
+export const KpiGrid = ({ tags }: KpiGridProps) => {
+  const totalReads = tags.length;
+  const uniqueTags = new Set(tags.map((tag) => tag.epc)).size;
+
+  const antennaCounts = new Map<number, number>();
+  tags.forEach((tag) => {
+    antennaCounts.set(tag.antenna, (antennaCounts.get(tag.antenna) ?? 0) + 1);
+  });
+
+  let topAntenna: number | null = null;
+  let topCount = 0;
+  antennaCounts.forEach((count, antenna) => {
+    if (count > topCount) {
+      topCount = count;
+      topAntenna = antenna;
+    }
+  });
+
+  const bestSignal = tags.reduce<RFIDTag | null>((best, current) => {
+    if (!best) return current;
+    return current.rssi > best.rssi ? current : best;
+  }, null);
+
+  const bestRssi = bestSignal ? `${bestSignal.rssi} dBm` : "0 dBm";
+  const bestEpc = bestSignal
+    ? `...${bestSignal.epc.slice(-6)}`
+    : "Esperando datos...";
+
   return (
     <section className="grid gap-4 md:grid-cols-3">
-      <Card label="Total lecturas" value={totalReads} icon={Activity} />
-      <Card label="Tags únicos" value={uniqueTags} icon={Radar} />
-      <Card
-        label="Pico RSSI"
-        value={`${peakRssi} dBm · Antena ${topAntenna ?? "-"}`}
-        icon={SignalHigh}
-      />
+      <CardBase>
+        <Activity className="h-6 w-6 text-sky-500" />
+        <div>
+          <p className="text-xs uppercase text-slate-400">
+            Lecturas (Únicas / Total)
+          </p>
+          <p className="mt-2 text-2xl font-bold text-slate-50">
+            {uniqueTags}
+          </p>
+          <p className="text-xs text-slate-500">
+            de {totalReads} lecturas globales
+          </p>
+        </div>
+      </CardBase>
+
+      <CardBase>
+        <RadioTower className="h-6 w-6 text-emerald-500" />
+        <div>
+          <p className="text-xs uppercase text-slate-400">Antena Más Activa</p>
+          <p className="mt-2 text-2xl font-bold text-slate-50">
+            {topAntenna ? `Antena ${topAntenna}` : "N/A"}
+          </p>
+          <p className="flex items-center gap-2 text-xs text-slate-500">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+            Procesando mayor tráfico
+          </p>
+        </div>
+      </CardBase>
+
+      <CardBase>
+        <SignalHigh className="h-6 w-6 text-amber-500" />
+        <div>
+          <p className="text-xs uppercase text-slate-400">Mejor Señal (RSSI)</p>
+          <p className="mt-2 text-2xl font-bold text-slate-50">
+            {bestRssi}
+          </p>
+          <p className="text-xs font-mono text-sky-400">Tag: {bestEpc}</p>
+        </div>
+      </CardBase>
     </section>
   );
 };
