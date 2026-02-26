@@ -1,4 +1,4 @@
-import { PauseCircle, PlayCircle, Download } from "lucide-react";
+import { Pause, Play, Download } from "lucide-react";
 
 type ControlPanelProps = {
   antennaFilter: number | "all";
@@ -24,17 +24,17 @@ export const ControlPanel = ({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-3">
           <button
-            className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${
               isPaused
-                ? "bg-warning/20 text-warning"
-                : "bg-success/20 text-success"
+                ? "border-amber-500 bg-amber-500/20 text-amber-500"
+                : "border-emerald-500 bg-emerald-500/20 text-emerald-500"
             }`}
             onClick={onTogglePause}
           >
             {isPaused ? (
-              <PlayCircle className="h-4 w-4" />
+              <Play className="h-4 w-4" />
             ) : (
-              <PauseCircle className="h-4 w-4" />
+              <Pause className="h-4 w-4" />
             )}
             {isPaused ? "Reanudar" : "Pausar"}
           </button>

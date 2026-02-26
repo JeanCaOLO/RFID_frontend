@@ -17,10 +17,21 @@ export const useRFIDStream = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const pausedRef = useRef(isPaused);
+  const bufferRef = useRef<RFIDTagEvent[]>([]);
   const retryTimeout = useRef<number>();
 
   useEffect(() => {
     pausedRef.current = isPaused;
+  }, [isPaused]);
+
+  useEffect(() => {
+    if (!isPaused && bufferRef.current.length) {
+      setEvents((prev) => {
+        const merged = [...bufferRef.current, ...prev].slice(0, 500);
+        bufferRef.current = [];
+        return merged;
+      });
+    }
   }, [isPaused]);
 
   useEffect(() => {
@@ -53,10 +64,13 @@ export const useRFIDStream = () => {
       };
 
       socket.onmessage = (message) => {
-        if (pausedRef.current) return;
         try {
           const data = JSON.parse(message.data) as RFIDTagEvent;
           const event = normalizeEvent(data);
+          if (pausedRef.current) {
+            bufferRef.current = [event, ...bufferRef.current].slice(0, 500);
+            return;
+          }
           setEvents((prev) => [event, ...prev].slice(0, 500));
         } catch (error) {
           console.error("Evento inválido", error);
