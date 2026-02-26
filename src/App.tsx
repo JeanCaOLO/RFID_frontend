@@ -14,6 +14,7 @@ export default function App() {
   const { exportToExcel } = useExport();
   const [antennaFilter, setAntennaFilter] = useState<number | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [minRssiFilter, setMinRssiFilter] = useState<number | "all">("all");
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
@@ -22,9 +23,11 @@ export default function App() {
       const searchMatch = event.epc
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
-      return antennaMatch && searchMatch;
+      const rssiMatch =
+        minRssiFilter === "all" ? true : event.rssi >= minRssiFilter;
+      return antennaMatch && searchMatch && rssiMatch;
     });
-  }, [events, antennaFilter, searchTerm]);
+  }, [events, antennaFilter, searchTerm, minRssiFilter]);
 
   return (
     <div className="min-h-screen">
@@ -39,13 +42,20 @@ export default function App() {
           antennaFilter={antennaFilter}
           onAntennaChange={setAntennaFilter}
           onSearchChange={setSearchTerm}
+          minRssiFilter={minRssiFilter}
+          onMinRssiChange={setMinRssiFilter}
           onExport={() => exportToExcel(filteredEvents)}
           onTogglePause={togglePause}
           isPaused={isPaused}
           antennas={ANTENNAS}
         />
 
-        <DataGrid events={filteredEvents} />
+        <DataGrid
+          events={events}
+          antennaFilter={antennaFilter}
+          searchTerm={searchTerm}
+          minRssiFilter={minRssiFilter}
+        />
       </main>
     </div>
   );

@@ -1,15 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDown, ArrowUp } from "lucide-react";
 import type { GroupedRFIDTag, RFIDTagEvent } from "../../types/rfid.types";
 import { formatTime, normalizeRssi } from "../../utils/formatters";
 
 type DataGridProps = {
   events: RFIDTagEvent[];
+  antennaFilter: number | "all";
+  searchTerm: string;
+  minRssiFilter: number | "all";
 };
 
-export const DataGrid = ({ events }: DataGridProps) => {
+type SortConfig = {
+  key: keyof GroupedRFIDTag;
+  direction: "asc" | "desc";
+};
+
+export const DataGrid = ({
+  events,
+  antennaFilter,
+  searchTerm,
+  minRssiFilter
+}: DataGridProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: "lastSeen",
+    direction: "desc"
+  });
   const [highlightedEpcs, setHighlightedEpcs] = useState<Set<string>>(
     () => new Set()
   );
@@ -54,10 +72,35 @@ export const DataGrid = ({ events }: DataGridProps) => {
   }, [events]);
 
   const sortedEvents = useMemo(() => {
-    return [...groupedEvents].sort(
-      (a, b) => new Date(b.lastSeen).getTime() - new Date(a.lastSeen).getTime()
-    );
-  }, [groupedEvents]);
+    const filtered = groupedEvents.filter((event) => {
+      const antennaMatch =
+        antennaFilter === "all"
+          ? true
+          : String(event.antenna) === String(antennaFilter);
+      const searchMatch = event.epc
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const rssiMatch =
+        minRssiFilter === "all" ? true : event.rssi >= minRssiFilter;
+      return antennaMatch && searchMatch && rssiMatch;
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      const { key, direction } = sortConfig;
+      const multiplier = direction === "asc" ? 1 : -1;
+      if (key === "lastSeen" || key === "firstSeen") {
+        return (
+          (new Date(a[key]).getTime() - new Date(b[key]).getTime()) * multiplier
+        );
+      }
+      if (typeof a[key] === "number" && typeof b[key] === "number") {
+        return (a[key] - b[key]) * multiplier;
+      }
+      return String(a[key]).localeCompare(String(b[key])) * multiplier;
+    });
+
+    return sorted;
+  }, [groupedEvents, antennaFilter, searchTerm, minRssiFilter, sortConfig]);
 
   const totalPages = Math.max(
     1,
@@ -122,17 +165,113 @@ export const DataGrid = ({ events }: DataGridProps) => {
     container.scrollTop = container.scrollHeight;
   }, [paginatedEvents, isUserScrolling, currentPage]);
 
+  const handleSort = (key: keyof GroupedRFIDTag) => {
+    setSortConfig((prev) => {
+      if (prev.key === key) {
+        return {
+          key,
+          direction: prev.direction === "asc" ? "desc" : "asc"
+        };
+      }
+      return { key, direction: "desc" };
+    });
+    setCurrentPage(1);
+  };
+
+  const renderSortIcon = (key: keyof GroupedRFIDTag) => {
+    if (sortConfig.key !== key) {
+      return <ArrowUp className="h-3 w-3 text-transparent" />;
+    }
+    return sortConfig.direction === "asc" ? (
+      <ArrowUp className="h-3 w-3 text-sky-400" />
+    ) : (
+      <ArrowDown className="h-3 w-3 text-sky-400" />
+    );
+  };
+
+  const getPaginationItems = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, "...", totalPages];
+    }
+
+    if (currentPage >= totalPages - 3) {
+      return [
+        1,
+        "...",
+        totalPages - 4,
+        totalPages - 3,
+        totalPages - 2,
+        totalPages - 1,
+        totalPages
+      ];
+    }
+
+    return [
+      1,
+      "...",
+      currentPage - 1,
+      currentPage,
+      currentPage + 1,
+      "...",
+      totalPages
+    ];
+  };
+
   return (
     <section className="rounded-2xl border border-white/10 bg-panel p-4 shadow-glow">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="text-xs uppercase tracking-wider text-text/60">
             <tr>
-              <th className="px-3 py-2">EPC</th>
-              <th className="px-3 py-2">Antena</th>
-              <th className="px-3 py-2">RSSI</th>
-              <th className="px-3 py-2">Veces leído</th>
-              <th className="px-3 py-2">Hora</th>
+              <th
+                className="px-3 py-2 transition-all hover:text-sky-400"
+                onClick={() => handleSort("epc")}
+              >
+                <button className="flex items-center gap-2">
+                  EPC
+                  {renderSortIcon("epc")}
+                </button>
+              </th>
+              <th
+                className="px-3 py-2 transition-all hover:text-sky-400"
+                onClick={() => handleSort("antenna")}
+              >
+                <button className="flex items-center gap-2">
+                  Antena
+                  {renderSortIcon("antenna")}
+                </button>
+              </th>
+              <th
+                className="px-3 py-2 transition-all hover:text-sky-400"
+                onClick={() => handleSort("rssi")}
+              >
+                <button className="flex items-center gap-2">
+                  RSSI
+                  {renderSortIcon("rssi")}
+                </button>
+              </th>
+              <th
+                className="px-3 py-2 transition-all hover:text-sky-400"
+                onClick={() => handleSort("readCount")}
+              >
+                <button className="flex items-center gap-2">
+                  Veces leído
+                  {renderSortIcon("readCount")}
+                </button>
+              </th>
+              <th
+                className="px-3 py-2 transition-all hover:text-sky-400"
+                onClick={() => handleSort("lastSeen")}
+              >
+                <button className="flex items-center gap-2">
+                  Última vez
+                  {renderSortIcon("lastSeen")}
+                </button>
+              </th>
             </tr>
           </thead>
         </table>
@@ -204,11 +343,23 @@ export const DataGrid = ({ events }: DataGridProps) => {
           >
             Anterior
           </button>
-          {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-            (page) => (
+          {getPaginationItems().map((item, index) => {
+            if (item === "...") {
+              return (
+                <span
+                  key={`ellipsis-${index}`}
+                  className="px-3 py-1 text-slate-500"
+                >
+                  ...
+                </span>
+              );
+            }
+
+            const page = item as number;
+            return (
               <button
                 key={page}
-                className={`rounded-md border px-3 py-1 text-slate-300 transition-colors hover:bg-slate-700 hover:text-sky-400 ${
+                className={`rounded-md border px-3 py-1 text-slate-400 transition-colors hover:bg-slate-700 hover:text-sky-400 ${
                   page === currentPage
                     ? "border-sky-500 bg-sky-500/20 font-bold text-sky-400"
                     : "border-slate-700 bg-slate-800"
@@ -217,8 +368,8 @@ export const DataGrid = ({ events }: DataGridProps) => {
               >
                 {page}
               </button>
-            )
-          )}
+            );
+          })}
           <button
             className={`rounded-md border border-slate-700 bg-slate-800 px-3 py-1 text-slate-300 transition-colors hover:bg-slate-700 hover:text-sky-400 ${
               currentPage === totalPages
