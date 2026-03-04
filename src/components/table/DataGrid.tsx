@@ -47,7 +47,8 @@ export const DataGrid = ({
           antenna: event.antenna,
           firstSeen: event.timestamp,
           lastSeen: event.timestamp,
-          readCount: 1
+          readCount: 1,
+          isValid: event.isValid
         });
         return;
       }
@@ -60,6 +61,7 @@ export const DataGrid = ({
         existing.lastSeen = event.timestamp;
         existing.rssi = event.rssi;
         existing.antenna = event.antenna;
+        existing.isValid = event.isValid;
       }
       if (eventTime < firstSeenTime) {
         existing.firstSeen = event.timestamp;

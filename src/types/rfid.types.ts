@@ -3,6 +3,7 @@ export type RFIDTagEvent = {
   rssi: number;
   antenna: number;
   timestamp: string;
+  isValid: boolean;
 };
 
 export type GroupedRFIDTag = {
@@ -12,4 +13,5 @@ export type GroupedRFIDTag = {
   firstSeen: string;
   lastSeen: string;
   readCount: number;
+  isValid: boolean;
 };
