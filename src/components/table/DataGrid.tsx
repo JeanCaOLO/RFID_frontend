@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle2, AlertTriangle } from "lucide-react";
 import type { GroupedRFIDTag, RFIDTagEvent } from "../../types/rfid.types";
 import { formatTime, normalizeRssi } from "../../utils/formatters";
 
@@ -61,7 +61,7 @@ export const DataGrid = ({
         existing.lastSeen = event.timestamp;
         existing.rssi = event.rssi;
         existing.antenna = event.antenna;
-        existing.isValid = event.isValid;
+        existing.isValid = event.isValid; // Actualizamos validación
       }
       if (eventTime < firstSeenTime) {
         existing.firstSeen = event.timestamp;
@@ -90,13 +90,15 @@ export const DataGrid = ({
     const sorted = [...filtered].sort((a, b) => {
       const { key, direction } = sortConfig;
       const multiplier = direction === "asc" ? 1 : -1;
+      
       if (key === "lastSeen" || key === "firstSeen") {
-        return (
-          (new Date(a[key]).getTime() - new Date(b[key]).getTime()) * multiplier
-        );
+        return (new Date(a[key]).getTime() - new Date(b[key]).getTime()) * multiplier;
       }
       if (typeof a[key] === "number" && typeof b[key] === "number") {
-        return (a[key] - b[key]) * multiplier;
+        return ((a[key] as number) - (b[key] as number)) * multiplier;
+      }
+      if (typeof a[key] === "boolean" && typeof b[key] === "boolean") {
+        return (a[key] === b[key] ? 0 : a[key] ? -1 : 1) * multiplier;
       }
       return String(a[key]).localeCompare(String(b[key])) * multiplier;
     });
@@ -229,8 +231,18 @@ export const DataGrid = ({
         <table className="w-full text-left text-sm">
           <thead className="text-xs uppercase tracking-wider text-text/60">
             <tr>
+              {/* --- NUEVA CABECERA: ESTADO --- */}
               <th
-                className="px-3 py-2 transition-all hover:text-sky-400"
+                className="px-3 py-2 transition-all hover:text-sky-400 cursor-pointer"
+                onClick={() => handleSort("isValid")}
+              >
+                <button className="flex items-center gap-2">
+                  Estado
+                  {renderSortIcon("isValid")}
+                </button>
+              </th>
+              <th
+                className="px-3 py-2 transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("epc")}
               >
                 <button className="flex items-center gap-2">
@@ -239,7 +251,7 @@ export const DataGrid = ({
                 </button>
               </th>
               <th
-                className="px-3 py-2 transition-all hover:text-sky-400"
+                className="px-3 py-2 transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("antenna")}
               >
                 <button className="flex items-center gap-2">
@@ -248,7 +260,7 @@ export const DataGrid = ({
                 </button>
               </th>
               <th
-                className="px-3 py-2 transition-all hover:text-sky-400"
+                className="px-3 py-2 transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("rssi")}
               >
                 <button className="flex items-center gap-2">
@@ -257,7 +269,7 @@ export const DataGrid = ({
                 </button>
               </th>
               <th
-                className="px-3 py-2 transition-all hover:text-sky-400"
+                className="px-3 py-2 transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("readCount")}
               >
                 <button className="flex items-center gap-2">
@@ -266,7 +278,7 @@ export const DataGrid = ({
                 </button>
               </th>
               <th
-                className="px-3 py-2 transition-all hover:text-sky-400"
+                className="px-3 py-2 transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("lastSeen")}
               >
                 <button className="flex items-center gap-2">
@@ -287,14 +299,36 @@ export const DataGrid = ({
             {paginatedEvents.map((event) => {
               const normalized = normalizeRssi(event.rssi);
               const isHighlighted = highlightedEpcs.has(event.epc);
+              
+              // --- LÓGICA DE ESTILOS DEL SEMÁFORO ---
+              const isError = event.isValid === false; // Evaluamos si es un error
+              let rowBgClass = "";
+              if (isError) {
+                rowBgClass = "bg-red-500/10"; // Fila roja si hay error
+              } else if (isHighlighted) {
+                rowBgClass = "bg-sky-500/10"; // Flash azul si es normal y se actualizó
+              }
+
               return (
                 <tr
                   key={event.epc}
-                  className={`border-t border-white/5 transition ${
-                    isHighlighted ? "bg-sky-500/10" : ""
-                  }`}
+                  className={`border-t border-white/5 transition-colors duration-300 ${rowBgClass}`}
                 >
-                  <td className="px-3 py-3 font-semibold text-primary">
+                  {/* --- NUEVA CELDA: ESTADO --- */}
+                  <td className="px-3 py-3 w-28">
+                    {!isError ? (
+                      <div className="flex items-center gap-2 text-emerald-500">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span className="text-xs font-semibold uppercase tracking-wider">OK</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-red-500">
+                        <AlertTriangle className="h-4 w-4" />
+                        <span className="text-xs font-bold uppercase tracking-wider">Error</span>
+                      </div>
+                    )}
+                  </td>
+                  <td className={`px-3 py-3 font-semibold ${isError ? 'text-red-400' : 'text-primary'}`}>
                     {event.epc}
                   </td>
                   <td className="px-3 py-3">Antena {event.antenna}</td>
@@ -305,14 +339,14 @@ export const DataGrid = ({
                       </span>
                       <div className="h-2 w-24 rounded-full bg-deep/60">
                         <div
-                          className="h-2 rounded-full bg-success"
+                          className={`h-2 rounded-full ${isError ? 'bg-red-500' : 'bg-success'}`}
                           style={{ width: `${normalized}%` }}
                         />
                       </div>
                     </div>
                   </td>
                   <td className="px-3 py-3">
-                    <span className="rounded-full bg-slate-700 px-2 py-1 text-xs font-mono text-sky-400">
+                    <span className={`rounded-full px-2 py-1 text-xs font-mono ${isError ? 'bg-red-500/20 text-red-400' : 'bg-slate-700 text-sky-400'}`}>
                       {event.readCount}
                     </span>
                   </td>
@@ -361,10 +395,10 @@ export const DataGrid = ({
             return (
               <button
                 key={page}
-                className={`rounded-md border px-3 py-1 text-slate-400 transition-colors hover:bg-slate-700 hover:text-sky-400 ${
+                className={`rounded-md border px-3 py-1 transition-colors hover:bg-slate-700 hover:text-sky-400 ${
                   page === currentPage
                     ? "border-sky-500 bg-sky-500/20 font-bold text-sky-400"
-                    : "border-slate-700 bg-slate-800"
+                    : "border-slate-700 bg-slate-800 text-slate-400"
                 }`}
                 onClick={() => setCurrentPage(page)}
               >
