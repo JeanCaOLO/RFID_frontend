@@ -45,6 +45,7 @@ export const DataGrid = ({
           epc: event.epc,
           rssi: event.rssi,
           antenna: event.antenna,
+          expectedAntenna: event.expectedAntenna,
           firstSeen: event.timestamp,
           lastSeen: event.timestamp,
           readCount: 1,
@@ -61,6 +62,7 @@ export const DataGrid = ({
         existing.lastSeen = event.timestamp;
         existing.rssi = event.rssi;
         existing.antenna = event.antenna;
+        existing.expectedAntenna = event.expectedAntenna;
         existing.isValid = event.isValid; // Actualizamos validación
       }
       if (eventTime < firstSeenTime) {
@@ -331,7 +333,20 @@ export const DataGrid = ({
                   <td className={`px-3 py-3 w-[30%] text-left font-semibold ${isError ? 'text-red-400' : 'text-primary'}`}>
                     {event.epc}
                   </td>
-                  <td className="px-3 py-3 w-32 text-left">Antena {event.antenna}</td>
+                  <td className="px-3 py-3 w-32 text-left">
+                    {!isError ? (
+                      <span className="text-primary">Antena {event.antenna}</span>
+                    ) : (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-red-400 font-bold line-through opacity-80">
+                          Antena {event.antenna} (Lectura)
+                        </span>
+                        <span className="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded border border-red-500/30 w-fit">
+                          Debió ser: Antena {event.expectedAntenna}
+                        </span>
+                      </div>
+                    )}
+                  </td>
                   <td className="px-3 py-3 w-40 text-left">
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-text/70">

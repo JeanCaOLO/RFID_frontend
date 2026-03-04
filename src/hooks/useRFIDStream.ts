@@ -9,6 +9,7 @@ const normalizeEvent = (payload: Partial<RFIDTagEvent>) => ({
   epc: payload.epc ?? "",
   rssi: Number(payload.rssi ?? 0),
   antenna: Number(payload.antenna ?? 0),
+  expectedAntenna: Number(payload.expectedAntenna ?? 0),
   timestamp: payload.timestamp ?? new Date().toISOString(),
   isValid: Boolean(payload.isValid)
 });
