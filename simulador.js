@@ -8,7 +8,7 @@ const axios = require("axios");
 // CONFIGURACIÓN
 const SERVER_HTTP = "http://localhost:4000/rfid";  // tu endpoint
 const SERVER_WS = "ws://localhost:4000";           // tu websocket
-const INTERVALO_MS = 2500;                         // cada 1 segundo
+const INTERVALO_MS = 2500;                         // cada 2.5 segundos
 
 // WebSocket
 let ws;
@@ -36,13 +36,19 @@ function generarEPC() {
 
 // Enviar lectura simulada
 function enviarLectura() {
+    // NUEVO: Generamos un estado de validación aleatorio
+    // Math.random() > 0.2 significa que hay un 80% de probabilidad de que sea TRUE (OK)
+    // y un 20% de probabilidad de que sea FALSE (Error de despacho).
+    const isReadingValid = Math.random() > 0.2;
+
     const lectura = {
         tagId: generarEPC(),
         rssi: -40 - Math.floor(Math.random() * 30),
-        antennaPort: Math.floor(Math.random() * 4) + 1
+        antennaPort: Math.floor(Math.random() * 4) + 1,
+        isValid: isReadingValid // <-- Se lo agregamos a la lectura
     };
 
-    console.log("Enviando lectura:", lectura);
+    console.log(`Enviando lectura [Estado: ${isReadingValid ? 'OK' : 'ERROR'}]:`, lectura);
 
     // Enviar por HTTP
     axios.post(SERVER_HTTP, lectura).catch(() => {});
@@ -53,7 +59,8 @@ function enviarLectura() {
             epc: lectura.tagId,
             rssi: lectura.rssi,
             antenna: lectura.antennaPort,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            isValid: lectura.isValid // <-- Se lo mandamos al frontend para el semáforo
         }));
     }
 }
