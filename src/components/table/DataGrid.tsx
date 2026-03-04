@@ -233,55 +233,55 @@ export const DataGrid = ({
             <tr>
               {/* --- NUEVA CABECERA: ESTADO --- */}
               <th
-                className="px-3 py-2 transition-all hover:text-sky-400 cursor-pointer"
+                className="px-3 py-2 w-28 text-left transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("isValid")}
               >
-                <button className="flex items-center gap-2">
+                <button className="flex w-full items-center justify-start gap-2">
                   Estado
                   {renderSortIcon("isValid")}
                 </button>
               </th>
               <th
-                className="px-3 py-2 transition-all hover:text-sky-400 cursor-pointer"
+                className="px-3 py-2 w-[30%] text-left transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("epc")}
               >
-                <button className="flex items-center gap-2">
+                <button className="flex w-full items-center justify-start gap-2">
                   EPC
                   {renderSortIcon("epc")}
                 </button>
               </th>
               <th
-                className="px-3 py-2 transition-all hover:text-sky-400 cursor-pointer"
+                className="px-3 py-2 w-32 text-left transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("antenna")}
               >
-                <button className="flex items-center gap-2">
+                <button className="flex w-full items-center justify-start gap-2">
                   Antena
                   {renderSortIcon("antenna")}
                 </button>
               </th>
               <th
-                className="px-3 py-2 transition-all hover:text-sky-400 cursor-pointer"
+                className="px-3 py-2 w-40 text-left transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("rssi")}
               >
-                <button className="flex items-center gap-2">
+                <button className="flex w-full items-center justify-start gap-2">
                   RSSI
                   {renderSortIcon("rssi")}
                 </button>
               </th>
               <th
-                className="px-3 py-2 transition-all hover:text-sky-400 cursor-pointer"
+                className="px-3 py-2 w-32 text-left transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("readCount")}
               >
-                <button className="flex items-center gap-2">
+                <button className="flex w-full items-center justify-start gap-2">
                   Veces leído
                   {renderSortIcon("readCount")}
                 </button>
               </th>
               <th
-                className="px-3 py-2 transition-all hover:text-sky-400 cursor-pointer"
+                className="px-3 py-2 w-40 text-left transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("lastSeen")}
               >
-                <button className="flex items-center gap-2">
+                <button className="flex w-full items-center justify-start gap-2">
                   Última vez
                   {renderSortIcon("lastSeen")}
                 </button>
@@ -315,7 +315,7 @@ export const DataGrid = ({
                   className={`border-t border-white/5 transition-colors duration-300 ${rowBgClass}`}
                 >
                   {/* --- NUEVA CELDA: ESTADO --- */}
-                  <td className="px-3 py-3 w-28">
+                  <td className="px-3 py-3 w-28 text-left">
                     {!isError ? (
                       <div className="flex items-center gap-2 text-emerald-500">
                         <CheckCircle2 className="h-4 w-4" />
@@ -328,11 +328,11 @@ export const DataGrid = ({
                       </div>
                     )}
                   </td>
-                  <td className={`px-3 py-3 font-semibold ${isError ? 'text-red-400' : 'text-primary'}`}>
+                  <td className={`px-3 py-3 w-[30%] text-left font-semibold ${isError ? 'text-red-400' : 'text-primary'}`}>
                     {event.epc}
                   </td>
-                  <td className="px-3 py-3">Antena {event.antenna}</td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 w-32 text-left">Antena {event.antenna}</td>
+                  <td className="px-3 py-3 w-40 text-left">
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-text/70">
                         {event.rssi} dBm
@@ -345,12 +345,12 @@ export const DataGrid = ({
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="px-3 py-3 w-32 text-left">
                     <span className={`rounded-full px-2 py-1 text-xs font-mono ${isError ? 'bg-red-500/20 text-red-400' : 'bg-slate-700 text-sky-400'}`}>
                       {event.readCount}
                     </span>
                   </td>
-                  <td className="px-3 py-3 text-text/80">
+                  <td className="px-3 py-3 w-40 text-left text-text/80">
                     {formatTime(event.lastSeen)}
                   </td>
                 </tr>
