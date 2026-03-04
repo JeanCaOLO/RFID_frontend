@@ -5,14 +5,41 @@ const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:4000";
 const API_URL =
   import.meta.env.VITE_API_URL ?? "http://localhost:4000/events";
 
-const normalizeEvent = (payload: Partial<RFIDTagEvent>) => ({
-  epc: payload.epc ?? "",
-  rssi: Number(payload.rssi ?? 0),
-  antenna: Number(payload.antenna ?? 0),
-  expectedAntenna: Number(payload.expectedAntenna ?? 0),
-  timestamp: payload.timestamp ?? new Date().toISOString(),
-  isValid: Boolean(payload.isValid)
-});
+type IncomingRFIDPayload = Partial<RFIDTagEvent> & {
+  tagId?: string;
+  antennaPort?: number | string;
+  expectedAntenna?: number | string;
+  expectedAntennaPort?: number | string;
+  expected_antenna?: number | string;
+  isValid?: boolean | number | string;
+  is_valid?: boolean | number | string;
+  valid?: boolean | number | string;
+  status?: boolean | number | string;
+};
+
+const normalizeEvent = (payload: IncomingRFIDPayload) => {
+  const antenna = Number(payload.antenna ?? payload.antennaPort ?? 0);
+  const expectedAntennaRaw =
+    payload.expectedAntenna ??
+    payload.expectedAntennaPort ??
+    payload.expected_antenna;
+  const hasExpectedAntenna =
+    expectedAntennaRaw !== undefined &&
+    expectedAntennaRaw !== null &&
+    String(expectedAntennaRaw).trim() !== "";
+  const expectedAntenna = hasExpectedAntenna
+    ? Number(expectedAntennaRaw)
+    : antenna;
+  const isPhysicallyValid = antenna === expectedAntenna;
+  return {
+    epc: payload.epc ?? payload.tagId ?? "",
+    rssi: Number(payload.rssi ?? 0),
+    antenna,
+    expectedAntenna,
+    timestamp: payload.timestamp ?? new Date().toISOString(),
+    isValid: isPhysicallyValid
+  };
+};
 
 export const useRFIDStream = () => {
   const [events, setEvents] = useState<RFIDTagEvent[]>([]);
@@ -41,7 +68,10 @@ export const useRFIDStream = () => {
       try {
         const response = await fetch(API_URL);
         const data = (await response.json()) as RFIDTagEvent[];
-        setEvents(data.map(normalizeEvent));
+        const normalized = data.map(normalizeEvent);
+        console.info("[RFID] Loaded history - raw:", data);
+        console.info("[RFID] Loaded history - normalized:", normalized);
+        setEvents(normalized);
       } catch (error) {
         console.error("No se pudo cargar el histórico", error);
       }
@@ -67,10 +97,14 @@ export const useRFIDStream = () => {
 
       socket.onmessage = (message) => {
         try {
-          const data = JSON.parse(message.data) as RFIDTagEvent;
+          console.debug("[RFID] WS raw message:", message.data);
+          const data = JSON.parse(message.data) as IncomingRFIDPayload;
+          console.debug("[RFID] WS parsed data:", data);
           const event = normalizeEvent(data);
+          console.debug("[RFID] WS normalized event:", event);
           if (pausedRef.current) {
             bufferRef.current = [event, ...bufferRef.current].slice(0, 500);
+            console.debug("[RFID] Buffered event (paused)", event);
             return;
           }
           setEvents((prev) => [event, ...prev].slice(0, 500));

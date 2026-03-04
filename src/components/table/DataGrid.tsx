@@ -58,7 +58,7 @@ export const DataGrid = ({
       const lastSeenTime = new Date(existing.lastSeen).getTime();
       const firstSeenTime = new Date(existing.firstSeen).getTime();
 
-      if (eventTime > lastSeenTime) {
+      if (eventTime >= lastSeenTime) {
         existing.lastSeen = event.timestamp;
         existing.rssi = event.rssi;
         existing.antenna = event.antenna;
@@ -253,12 +253,21 @@ export const DataGrid = ({
                 </button>
               </th>
               <th
-                className="px-3 py-2 w-32 text-left transition-all hover:text-sky-400 cursor-pointer"
+                className="px-3 py-2 w-28 text-left transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("antenna")}
               >
                 <button className="flex w-full items-center justify-start gap-2">
                   Antena
                   {renderSortIcon("antenna")}
+                </button>
+              </th>
+              <th
+                className="px-3 py-2 w-36 text-left transition-all hover:text-sky-400 cursor-pointer"
+                onClick={() => handleSort("expectedAntenna")}
+              >
+                <button className="flex w-full items-center justify-start gap-2">
+                  Antena Esperada
+                  {renderSortIcon("expectedAntenna")}
                 </button>
               </th>
               <th
@@ -303,7 +312,7 @@ export const DataGrid = ({
               const isHighlighted = highlightedEpcs.has(event.epc);
               
               // --- LÓGICA DE ESTILOS DEL SEMÁFORO ---
-              const isError = event.isValid === false; // Evaluamos si es un error
+              const isError = event.antenna !== event.expectedAntenna;
               let rowBgClass = "";
               if (isError) {
                 rowBgClass = "bg-red-500/10"; // Fila roja si hay error
@@ -333,19 +342,27 @@ export const DataGrid = ({
                   <td className={`px-3 py-3 w-[30%] text-left font-semibold ${isError ? 'text-red-400' : 'text-primary'}`}>
                     {event.epc}
                   </td>
-                  <td className="px-3 py-3 w-32 text-left">
-                    {!isError ? (
-                      <span className="text-primary">Antena {event.antenna}</span>
-                    ) : (
-                      <div className="flex flex-col gap-1">
-                        <span className="text-red-400 font-bold line-through opacity-80">
-                          Antena {event.antenna} (Lectura)
-                        </span>
-                        <span className="text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded border border-red-500/30 w-fit">
-                          Debió ser: Antena {event.expectedAntenna}
-                        </span>
-                      </div>
-                    )}
+                  <td className="px-3 py-3 w-28 text-left">
+                    <span
+                      className={
+                        isError
+                          ? "text-red-400 font-bold line-through opacity-80"
+                          : "text-primary"
+                      }
+                    >
+                      Antena {event.antenna}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 w-36 text-left">
+                    <span
+                      className={
+                        isError
+                          ? "text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded border border-red-500/30 w-fit"
+                          : "text-slate-200"
+                      }
+                    >
+                      Antena {event.expectedAntenna}
+                    </span>
                   </td>
                   <td className="px-3 py-3 w-40 text-left">
                     <div className="flex items-center gap-3">

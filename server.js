@@ -27,6 +27,9 @@ app.post("/rfid", (req, res) => {
         epc: p.tagId || p.EPC || null,
         rssi: p.rssi || null,
         antenna: p.antennaPort || null,
+        // 🔥 NUEVOS CAMPOS: Dejamos pasar la data del simulador
+        expectedAntenna: p.expectedAntenna || p.antennaPort || null, 
+        isValid: p.isValid !== undefined ? p.isValid : true,         
         timestamp: new Date().toISOString()
     };
 
