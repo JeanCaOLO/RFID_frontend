@@ -1,14 +1,8 @@
-import { Activity, RadioTower, SignalHigh } from "lucide-react";
-
-type RFIDTag = {
-  epc: string;
-  antenna: number;
-  rssi: number;
-  timestamp: string;
-};
+import { Activity, AlertTriangle, RadioTower, SignalHigh } from "lucide-react";
+import type { RFIDTagEvent } from "../../types/rfid.types";
 
 type KpiGridProps = {
-  tags: RFIDTag[];
+  tags: RFIDTagEvent[];
 };
 
 const CardBase = ({ children }: { children: React.ReactNode }) => (
@@ -35,7 +29,7 @@ export const KpiGrid = ({ tags }: KpiGridProps) => {
     }
   });
 
-  const bestSignal = tags.reduce<RFIDTag | null>((best, current) => {
+  const bestSignal = tags.reduce<RFIDTagEvent | null>((best, current) => {
     if (!best) return current;
     return current.rssi > best.rssi ? current : best;
   }, null);
@@ -45,8 +39,28 @@ export const KpiGrid = ({ tags }: KpiGridProps) => {
     ? `...${bestSignal.epc.slice(-6)}`
     : "Esperando datos...";
 
+  const errorTags = tags.filter((tag) => !tag.isValid);
+  const totalErrors = errorTags.length;
+
+  const errorAntennaCounts = new Map<number, number>();
+  errorTags.forEach((tag) => {
+    errorAntennaCounts.set(
+      tag.antenna,
+      (errorAntennaCounts.get(tag.antenna) ?? 0) + 1
+    );
+  });
+
+  let topErrorAntenna: number | null = null;
+  let topErrorCount = 0;
+  errorAntennaCounts.forEach((count, antenna) => {
+    if (count > topErrorCount) {
+      topErrorCount = count;
+      topErrorAntenna = antenna;
+    }
+  });
+
   return (
-    <section className="grid gap-4 md:grid-cols-3">
+    <section className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
       <CardBase>
         <Activity className="h-6 w-6 text-sky-500" />
         <div>
@@ -86,6 +100,29 @@ export const KpiGrid = ({ tags }: KpiGridProps) => {
           <p className="text-xs font-mono text-sky-400">Tag: {bestEpc}</p>
         </div>
       </CardBase>
+
+      <div className="rounded-xl border border-red-500/50 bg-red-950/30 p-5 shadow-[0_0_15px_rgba(239,68,68,0.2)] transition hover:border-red-400">
+        <div className="flex items-start gap-4">
+          <AlertTriangle className="h-6 w-6 text-red-500" />
+          <div>
+            <p className="text-xs uppercase text-red-400/80">
+              Alertas de Despacho
+            </p>
+            <p
+              className={`mt-2 text-2xl font-bold text-red-500 ${
+                totalErrors > 0 ? "animate-pulse" : ""
+              }`}
+            >
+              {totalErrors}
+            </p>
+            <p className="text-sm text-slate-400">
+              {totalErrors > 0
+                ? `Principal foco: Antena ${topErrorAntenna ?? "Ninguna"}`
+                : "Operación normal"}
+            </p>
+          </div>
+        </div>
+      </div>
     </section>
   );
 };
