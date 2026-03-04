@@ -36,19 +36,31 @@ function generarEPC() {
 
 // Enviar lectura simulada
 function enviarLectura() {
-    // NUEVO: Generamos un estado de validación aleatorio
-    // Math.random() > 0.2 significa que hay un 80% de probabilidad de que sea TRUE (OK)
-    // y un 20% de probabilidad de que sea FALSE (Error de despacho).
+    // 1. Definimos si es válido o error
     const isReadingValid = Math.random() > 0.2;
+    
+    // 2. Definimos por qué antena pasó físicamente
+    const scannedAntenna = Math.floor(Math.random() * 4) + 1;
+    
+    // 3. NUEVO: Lógica para la antena esperada
+    let expectedAntenna = scannedAntenna;
+    if (!isReadingValid) {
+        // Si hay un error, forzamos a que la antena esperada sea DIFERENTE a la escaneada
+        do {
+            expectedAntenna = Math.floor(Math.random() * 4) + 1;
+        } while (expectedAntenna === scannedAntenna);
+    }
 
     const lectura = {
         tagId: generarEPC(),
         rssi: -40 - Math.floor(Math.random() * 30),
-        antennaPort: Math.floor(Math.random() * 4) + 1,
-        isValid: isReadingValid // <-- Se lo agregamos a la lectura
+        antennaPort: scannedAntenna,
+        expectedAntenna: expectedAntenna, // <-- NUEVO DATO
+        isValid: isReadingValid 
     };
 
-    console.log(`Enviando lectura [Estado: ${isReadingValid ? 'OK' : 'ERROR'}]:`, lectura);
+    // Imprimimos en consola con más detalle para que veas el error claro
+    console.log(`Enviando lectura [Estado: ${isReadingValid ? 'OK' : 'ERROR (Debió ser Ant ' + expectedAntenna + ')'}]:`, lectura);
 
     // Enviar por HTTP
     axios.post(SERVER_HTTP, lectura).catch(() => {});
@@ -59,8 +71,9 @@ function enviarLectura() {
             epc: lectura.tagId,
             rssi: lectura.rssi,
             antenna: lectura.antennaPort,
+            expectedAntenna: lectura.expectedAntenna, // <-- Se lo mandamos al frontend
             timestamp: new Date().toISOString(),
-            isValid: lectura.isValid // <-- Se lo mandamos al frontend para el semáforo
+            isValid: lectura.isValid 
         }));
     }
 }
