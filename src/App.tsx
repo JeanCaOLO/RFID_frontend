@@ -6,12 +6,14 @@ import { DataGrid } from "./components/table/DataGrid";
 import { LiveMetricsDashboard } from "./components/charts/LiveMetricsDashboard";
 import { useRFIDStream } from "./hooks/useRFIDStream";
 import { useExport } from "./hooks/useExport";
+import { useTheme } from "./hooks/useTheme";
 
 const ANTENNAS = [1, 2, 3, 4];
 
 export default function App() {
   const { events, isConnected, isPaused, togglePause } = useRFIDStream();
   const { exportToExcel } = useExport();
+  const { theme, toggleTheme } = useTheme();
   const [antennaFilter, setAntennaFilter] = useState<number | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [minRssiFilter, setMinRssiFilter] = useState<number | "all">("all");
@@ -30,8 +32,12 @@ export default function App() {
   }, [events, antennaFilter, searchTerm, minRssiFilter]);
 
   return (
-    <div className="min-h-screen">
-      <Header isConnected={isConnected} />
+    <div className="min-h-screen bg-slate-100 text-slate-900 transition-colors duration-300 dark:bg-slate-900 dark:text-slate-50">
+      <Header
+        isConnected={isConnected}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pb-12">
         <KpiGrid tags={events} />

@@ -6,7 +6,7 @@ type KpiGridProps = {
 };
 
 const CardBase = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-5 shadow-lg transition hover:border-sky-500/50">
+  <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-lg transition hover:border-sky-500/50 dark:border-slate-700 dark:bg-slate-800">
     <div className="flex items-start gap-4">{children}</div>
   </div>
 );
@@ -64,13 +64,13 @@ export const KpiGrid = ({ tags }: KpiGridProps) => {
       <CardBase>
         <Activity className="h-6 w-6 text-sky-500" />
         <div>
-          <p className="text-xs uppercase text-slate-400">
+          <p className="text-xs uppercase text-slate-500 dark:text-slate-400">
             Lecturas (Únicas / Total)
           </p>
-          <p className="mt-2 text-2xl font-bold text-slate-50">
+          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-50">
             {uniqueTags}
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             de {totalReads} lecturas globales
           </p>
         </div>
@@ -79,11 +79,11 @@ export const KpiGrid = ({ tags }: KpiGridProps) => {
       <CardBase>
         <RadioTower className="h-6 w-6 text-emerald-500" />
         <div>
-          <p className="text-xs uppercase text-slate-400">Antena Más Activa</p>
-          <p className="mt-2 text-2xl font-bold text-slate-50">
+          <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Antena Más Activa</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-50">
             {topAntenna ? `Antena ${topAntenna}` : "N/A"}
           </p>
-          <p className="flex items-center gap-2 text-xs text-slate-500">
+          <p className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
             Procesando mayor tráfico
           </p>
@@ -93,15 +93,15 @@ export const KpiGrid = ({ tags }: KpiGridProps) => {
       <CardBase>
         <SignalHigh className="h-6 w-6 text-amber-500" />
         <div>
-          <p className="text-xs uppercase text-slate-400">Mejor Señal (RSSI)</p>
-          <p className="mt-2 text-2xl font-bold text-slate-50">
+          <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Mejor Señal (RSSI)</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-50">
             {bestRssi}
           </p>
           <p className="text-xs font-mono text-sky-400">Tag: {bestEpc}</p>
         </div>
       </CardBase>
 
-      <div className="rounded-xl border border-red-500/50 bg-red-950/30 p-5 shadow-[0_0_15px_rgba(239,68,68,0.2)] transition hover:border-red-400">
+      <div className="rounded-xl border border-red-500/50 bg-red-100/70 p-5 shadow-[0_0_15px_rgba(239,68,68,0.2)] transition hover:border-red-400 dark:bg-red-950/30">
         <div className="flex items-start gap-4">
           <AlertTriangle className="h-6 w-6 text-red-500" />
           <div>
@@ -115,7 +115,7 @@ export const KpiGrid = ({ tags }: KpiGridProps) => {
             >
               {totalErrors}
             </p>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               {totalErrors > 0
                 ? `Principal foco: Antena ${topErrorAntenna ?? "Ninguna"}`
                 : "Operación normal"}
