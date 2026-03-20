@@ -17,6 +17,9 @@ export default function App() {
   const [antennaFilter, setAntennaFilter] = useState<number | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [minRssiFilter, setMinRssiFilter] = useState<number | "all">("all");
+  const [timeZone, setTimeZone] = useState(
+    Intl.DateTimeFormat().resolvedOptions().timeZone
+  );
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
@@ -37,6 +40,8 @@ export default function App() {
         isConnected={isConnected}
         theme={theme}
         onToggleTheme={toggleTheme}
+        timeZone={timeZone}
+        setTimeZone={setTimeZone}
       />
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pb-12">
@@ -61,6 +66,7 @@ export default function App() {
           antennaFilter={antennaFilter}
           searchTerm={searchTerm}
           minRssiFilter={minRssiFilter}
+          timeZone={timeZone}
         />
       </main>
     </div>

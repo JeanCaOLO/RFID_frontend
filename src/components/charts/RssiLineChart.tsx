@@ -68,9 +68,9 @@ export const RssiLineChart = ({
     activeFilter === "all" ? [1, 2, 3, 4] : [activeFilter];
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-panel p-5 shadow-glow">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-slate-700/50 dark:bg-[#0d1b2a]">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-primary">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-900 transition-colors duration-300 dark:text-sky-300">
           RSSI en tiempo real
         </h3>
         <div className="flex flex-wrap gap-2">
@@ -83,7 +83,7 @@ export const RssiLineChart = ({
                 className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider transition ${
                   isActive
                     ? "bg-primary text-white shadow-glow"
-                    : "bg-deep/60 text-text/60 hover:text-text"
+                    : "rounded-full border border-slate-200 bg-slate-100 px-4 py-1 text-slate-700 transition-colors duration-300 hover:bg-slate-200 dark:border-transparent dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600"
                 }`}
               >
                 {value === "all" ? "Todas" : `Ant ${value}`}
@@ -96,8 +96,18 @@ export const RssiLineChart = ({
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-            <XAxis dataKey="time" stroke="#94a3b8" fontSize={10} />
-            <YAxis stroke="#94a3b8" fontSize={10} domain={[-90, -10]} />
+            <XAxis
+              dataKey="time"
+              stroke="currentColor"
+              className="text-slate-500 dark:text-slate-400"
+              fontSize={10}
+            />
+            <YAxis
+              stroke="currentColor"
+              className="text-slate-500 dark:text-slate-400"
+              fontSize={10}
+              domain={[-90, -10]}
+            />
             <Tooltip
               contentStyle={{
                 background: "#0f172a",

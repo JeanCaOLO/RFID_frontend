@@ -1,7 +1,18 @@
 import { format } from "date-fns";
 
-export const formatTime = (iso: string) => {
-  return format(new Date(iso), "HH:mm:ss");
+export const formatTime = (isoString: string, timeZone?: string) => {
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString("es-ES", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZone:
+        timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+    });
+  } catch (e) {
+    return "--:--:--";
+  }
 };
 
 export const formatDateTime = (iso: string) => {

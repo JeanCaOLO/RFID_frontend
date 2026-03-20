@@ -8,6 +8,7 @@ type DataGridProps = {
   antennaFilter: number | "all";
   searchTerm: string;
   minRssiFilter: number | "all";
+  timeZone: string;
 };
 
 type SortConfig = {
@@ -19,7 +20,8 @@ export const DataGrid = ({
   events,
   antennaFilter,
   searchTerm,
-  minRssiFilter
+  minRssiFilter,
+  timeZone
 }: DataGridProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
@@ -383,7 +385,7 @@ export const DataGrid = ({
                     </span>
                   </td>
                   <td className="px-3 py-3 w-40 text-left text-slate-600 dark:text-slate-200">
-                    {formatTime(event.lastSeen)}
+                    {formatTime(event.lastSeen, timeZone)}
                   </td>
                 </tr>
               );

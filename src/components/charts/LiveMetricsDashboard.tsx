@@ -8,17 +8,11 @@ import {
   ResponsiveContainer,
   Tooltip
 } from "recharts";
+import type { RFIDTagEvent } from "../../types/rfid.types";
 import { RssiLineChart } from "./RssiLineChart";
 
-type RFIDTag = {
-  epc: string;
-  antenna: number;
-  rssi: number;
-  timestamp: string;
-};
-
 type LiveMetricsDashboardProps = {
-  tags: RFIDTag[];
+  tags: RFIDTagEvent[];
   selectedAntenna?: number | "all";
 };
 
@@ -55,14 +49,16 @@ export const LiveMetricsDashboard = ({
     <section className="grid gap-6 lg:grid-cols-2">
       <RssiLineChart events={tags} selectedAntenna={selectedAntenna} />
 
-      <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-slate-700/50 dark:bg-[#0d1b2a]">
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-xs uppercase tracking-[0.3em] text-slate-400">
+          <h3 className="text-xs uppercase tracking-[0.3em] text-slate-900 transition-colors duration-300 dark:text-sky-300">
             Distribución por antenas
           </h3>
-          <span className="text-xs text-slate-500">Impacto en tiempo real</span>
+          <span className="text-xs text-slate-500 transition-colors duration-300 dark:text-slate-400">
+            Impacto en tiempo real
+          </span>
         </div>
-        <div className="h-[300px]">
+        <div className="h-[300px] text-slate-500 transition-colors duration-300 dark:text-slate-400">
           <ResponsiveContainer width="100%" height="100%">
             <RadialBarChart
               data={antennaDistribution}
@@ -93,7 +89,7 @@ export const LiveMetricsDashboard = ({
                 iconType="circle"
                 layout="horizontal"
                 verticalAlign="bottom"
-                wrapperStyle={{ color: "#94a3b8", fontSize: 12 }}
+                wrapperStyle={{ color: "currentColor", fontSize: 12 }}
               />
             </RadialBarChart>
           </ResponsiveContainer>

@@ -1,15 +1,39 @@
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
 import { Moon, Sun, Wifi, WifiOff } from "lucide-react";
 import type { Theme } from "../../hooks/useTheme";
+import { formatTime } from "../../utils/formatters";
+
+const DEFAULT_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+const TIME_ZONE_OPTIONS = [
+  { value: DEFAULT_TIME_ZONE, label: `Hora local (${DEFAULT_TIME_ZONE})` },
+  { value: "America/Caracas", label: "America/Caracas (Venezuela)" },
+  {
+    value: "America/Costa_Rica",
+    label: "America/Costa_Rica (Costa Rica)"
+  },
+  {
+    value: "America/Mexico_City",
+    label: "America/Mexico_City (Mexico)"
+  },
+  { value: "UTC", label: "UTC (Tiempo Universal Coordinado)" }
+];
 
 type HeaderProps = {
   isConnected: boolean;
   theme: Theme;
   onToggleTheme: () => void;
+  timeZone: string;
+  setTimeZone: (value: string) => void;
 };
 
-export const Header = ({ isConnected, theme, onToggleTheme }: HeaderProps) => {
+export const Header = ({
+  isConnected,
+  theme,
+  onToggleTheme,
+  timeZone,
+  setTimeZone
+}: HeaderProps) => {
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -61,12 +85,36 @@ export const Header = ({ isConnected, theme, onToggleTheme }: HeaderProps) => {
               {theme === "dark" ? "Modo claro" : "Modo oscuro"}
             </span>
           </button>
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="timezone-switcher"
+              className="text-xs uppercase tracking-[0.2em] text-slate-500 transition-colors duration-300 dark:text-slate-400"
+            >
+              Zona
+            </label>
+            <select
+              id="timezone-switcher"
+              value={timeZone}
+              onChange={(event) => setTimeZone(event.target.value)}
+              className="rounded-md border border-slate-300 bg-transparent px-2 py-1 text-sm text-slate-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-sky-500/50 dark:border-slate-700 dark:text-slate-300"
+            >
+              {TIME_ZONE_OPTIONS.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                  className="bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100"
+                >
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="text-right">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-              Hora local
+              Hora ({timeZone === DEFAULT_TIME_ZONE ? "Local" : timeZone})
             </p>
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-              {format(now, "HH:mm:ss")}
+              {formatTime(now.toISOString(), timeZone)}
             </p>
           </div>
         </div>
