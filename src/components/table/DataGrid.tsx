@@ -47,7 +47,9 @@ export const DataGrid = ({
           epc: event.epc,
           rssi: event.rssi,
           antenna: event.antenna,
-          expectedAntenna: event.expectedAntenna,
+          readerName: event.readerName,
+          dockDoor: event.dockDoor,
+          expectedDockDoor: event.expectedDockDoor,
           firstSeen: event.timestamp,
           lastSeen: event.timestamp,
           readCount: 1,
@@ -64,7 +66,9 @@ export const DataGrid = ({
         existing.lastSeen = event.timestamp;
         existing.rssi = event.rssi;
         existing.antenna = event.antenna;
-        existing.expectedAntenna = event.expectedAntenna;
+        existing.readerName = event.readerName;
+        existing.dockDoor = event.dockDoor;
+        existing.expectedDockDoor = event.expectedDockDoor;
         existing.isValid = event.isValid; // Actualizamos validación
       }
       if (eventTime < firstSeenTime) {
@@ -255,21 +259,30 @@ export const DataGrid = ({
                 </button>
               </th>
               <th
-                className="px-3 py-2 w-28 text-left transition-all hover:text-sky-400 cursor-pointer"
+                className="px-3 py-2 w-32 text-left transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("antenna")}
               >
                 <button className="flex w-full items-center justify-start gap-2">
-                  Antena
+                  Lector / Antena
                   {renderSortIcon("antenna")}
                 </button>
               </th>
               <th
-                className="px-3 py-2 w-36 text-left transition-all hover:text-sky-400 cursor-pointer"
-                onClick={() => handleSort("expectedAntenna")}
+                className="px-3 py-2 w-32 text-left transition-all hover:text-sky-400 cursor-pointer"
+                onClick={() => handleSort("dockDoor")}
               >
                 <button className="flex w-full items-center justify-start gap-2">
-                  Antena Esperada
-                  {renderSortIcon("expectedAntenna")}
+                  Puerta
+                  {renderSortIcon("dockDoor")}
+                </button>
+              </th>
+              <th
+                className="px-3 py-2 w-36 text-left transition-all hover:text-sky-400 cursor-pointer"
+                onClick={() => handleSort("expectedDockDoor")}
+              >
+                <button className="flex w-full items-center justify-start gap-2">
+                  Puerta Esperada
+                  {renderSortIcon("expectedDockDoor")}
                 </button>
               </th>
               <th
@@ -314,7 +327,8 @@ export const DataGrid = ({
               const isHighlighted = highlightedEpcs.has(event.epc);
               
               // --- LÓGICA DE ESTILOS DEL SEMÁFORO ---
-              const isError = event.antenna !== event.expectedAntenna;
+              // El error lo determina el WMS (campo isValid).
+              const isError = !event.isValid;
               let rowBgClass = "";
               if (isError) {
                 rowBgClass = "bg-red-500/10"; // Fila roja si hay error
@@ -344,7 +358,13 @@ export const DataGrid = ({
                   <td className={`px-3 py-3 w-[30%] text-left font-semibold ${isError ? 'text-red-400' : 'text-primary'}`}>
                     {event.epc}
                   </td>
-                  <td className="px-3 py-3 w-28 text-left">
+                  <td className="px-3 py-3 w-32 text-left">
+                    <span className="text-slate-700 dark:text-slate-200">
+                      {event.readerName}
+                      <span className="text-slate-400"> · Ant {event.antenna}</span>
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 w-32 text-left">
                     <span
                       className={
                         isError
@@ -352,7 +372,7 @@ export const DataGrid = ({
                           : "text-primary"
                       }
                     >
-                      Antena {event.antenna}
+                      {event.dockDoor ?? "—"}
                     </span>
                   </td>
                   <td className="px-3 py-3 w-36 text-left">
@@ -363,7 +383,7 @@ export const DataGrid = ({
                           : "text-slate-700 dark:text-slate-200"
                       }
                     >
-                      Antena {event.expectedAntenna}
+                      {event.expectedDockDoor ?? event.dockDoor ?? "—"}
                     </span>
                   </td>
                   <td className="px-3 py-3 w-40 text-left">

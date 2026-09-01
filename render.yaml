@@ -1,0 +1,17 @@
+# Configuración de despliegue del frontend en Render (Static Site)
+# Docs: https://render.com/docs/static-sites
+services:
+  - type: web
+    name: rfid-dashboard
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

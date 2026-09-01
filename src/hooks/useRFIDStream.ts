@@ -1,45 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { RFIDTagEvent } from "../types/rfid.types";
+import type {
+  RealtimeChannel,
+  RealtimePostgresInsertPayload
+} from "@supabase/supabase-js";
+import { supabase } from "../lib/supabase";
+import type { RFIDTagEvent, TagReadRow } from "../types/rfid.types";
 
-const WS_URL = import.meta.env.VITE_WS_URL ?? "ws://localhost:4000";
-const API_URL =
-  import.meta.env.VITE_API_URL ?? "http://localhost:4000/events";
+const MAX_EVENTS = 500;
 
-type IncomingRFIDPayload = Partial<RFIDTagEvent> & {
-  tagId?: string;
-  antennaPort?: number | string;
-  expectedAntenna?: number | string;
-  expectedAntennaPort?: number | string;
-  expected_antenna?: number | string;
-  isValid?: boolean | number | string;
-  is_valid?: boolean | number | string;
-  valid?: boolean | number | string;
-  status?: boolean | number | string;
-};
-
-const normalizeEvent = (payload: IncomingRFIDPayload) => {
-  const antenna = Number(payload.antenna ?? payload.antennaPort ?? 0);
-  const expectedAntennaRaw =
-    payload.expectedAntenna ??
-    payload.expectedAntennaPort ??
-    payload.expected_antenna;
-  const hasExpectedAntenna =
-    expectedAntennaRaw !== undefined &&
-    expectedAntennaRaw !== null &&
-    String(expectedAntennaRaw).trim() !== "";
-  const expectedAntenna = hasExpectedAntenna
-    ? Number(expectedAntennaRaw)
-    : antenna;
-  const isPhysicallyValid = antenna === expectedAntenna;
-  return {
-    epc: payload.epc ?? payload.tagId ?? "",
-    rssi: Number(payload.rssi ?? 0),
-    antenna,
-    expectedAntenna,
-    timestamp: payload.timestamp ?? new Date().toISOString(),
-    isValid: isPhysicallyValid
-  };
-};
+const mapRow = (row: TagReadRow): RFIDTagEvent => ({
+  epc: row.epc,
+  rssi: Number(row.rssi ?? 0),
+  antenna: Number(row.antenna_port ?? 0),
+  readerName: row.reader_name,
+  dockDoor: row.dock_door,
+  expectedDockDoor: row.expected_dock_door,
+  timestamp: row.read_at,
+  isValid: row.is_valid,
+  reason: row.reason ?? undefined
+});
 
 export const useRFIDStream = () => {
   const [events, setEvents] = useState<RFIDTagEvent[]>([]);
@@ -47,80 +26,69 @@ export const useRFIDStream = () => {
   const [isPaused, setIsPaused] = useState(false);
   const pausedRef = useRef(isPaused);
   const bufferRef = useRef<RFIDTagEvent[]>([]);
-  const retryTimeout = useRef<number>();
 
   useEffect(() => {
     pausedRef.current = isPaused;
   }, [isPaused]);
 
+  // Al reanudar, vaciar el buffer acumulado durante la pausa
   useEffect(() => {
     if (!isPaused && bufferRef.current.length) {
       setEvents((prev) => {
-        const merged = [...bufferRef.current, ...prev].slice(0, 500);
+        const merged = [...bufferRef.current, ...prev].slice(0, MAX_EVENTS);
         bufferRef.current = [];
         return merged;
       });
     }
   }, [isPaused]);
 
+  // Carga inicial del histórico desde Supabase
   useEffect(() => {
     const loadHistory = async () => {
-      try {
-        const response = await fetch(API_URL);
-        const data = (await response.json()) as RFIDTagEvent[];
-        const normalized = data.map(normalizeEvent);
-        console.info("[RFID] Loaded history - raw:", data);
-        console.info("[RFID] Loaded history - normalized:", normalized);
-        setEvents(normalized);
-      } catch (error) {
-        console.error("No se pudo cargar el histórico", error);
+      const { data, error } = await supabase
+        .from("tag_reads")
+        .select("*")
+        .order("read_at", { ascending: false })
+        .limit(MAX_EVENTS);
+
+      if (error) {
+        console.error("[RFID] Error cargando histórico", error);
+        return;
       }
+      setEvents((data as TagReadRow[]).map(mapRow));
     };
 
     loadHistory();
   }, []);
 
+  // Suscripción Realtime a nuevas lecturas
   useEffect(() => {
-    let socket: WebSocket | null = null;
+    let channel: RealtimeChannel;
 
-    const connect = () => {
-      socket = new WebSocket(WS_URL);
-
-      socket.onopen = () => {
-        setIsConnected(true);
-      };
-
-      socket.onclose = () => {
-        setIsConnected(false);
-        retryTimeout.current = window.setTimeout(connect, 2000);
-      };
-
-      socket.onmessage = (message) => {
-        try {
-          console.debug("[RFID] WS raw message:", message.data);
-          const data = JSON.parse(message.data) as IncomingRFIDPayload;
-          console.debug("[RFID] WS parsed data:", data);
-          const event = normalizeEvent(data);
-          console.debug("[RFID] WS normalized event:", event);
-          if (pausedRef.current) {
-            bufferRef.current = [event, ...bufferRef.current].slice(0, 500);
-            console.debug("[RFID] Buffered event (paused)", event);
-            return;
-          }
-          setEvents((prev) => [event, ...prev].slice(0, 500));
-        } catch (error) {
-          console.error("Evento inválido", error);
-        }
-      };
+    const handleInsert = (
+      payload: RealtimePostgresInsertPayload<TagReadRow>
+    ) => {
+      const event = mapRow(payload.new);
+      if (pausedRef.current) {
+        bufferRef.current = [event, ...bufferRef.current].slice(0, MAX_EVENTS);
+        return;
+      }
+      setEvents((prev) => [event, ...prev].slice(0, MAX_EVENTS));
     };
 
-    connect();
+    channel = supabase
+      .channel("tag_reads_stream")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "tag_reads" },
+        handleInsert
+      )
+      .subscribe((status) => {
+        setIsConnected(status === "SUBSCRIBED");
+      });
 
     return () => {
-      if (retryTimeout.current) {
-        window.clearTimeout(retryTimeout.current);
-      }
-      socket?.close();
+      supabase.removeChannel(channel);
     };
   }, []);
 
