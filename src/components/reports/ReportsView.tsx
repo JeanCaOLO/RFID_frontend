@@ -115,7 +115,9 @@ export const ReportsView = ({ timeZone }: { timeZone: string }) => {
             Actualizar
           </button>
           <button
-            onClick={() => exportErrorReport(errorDetails, doorErrors)}
+            onClick={() =>
+              exportErrorReport(errorDetails, doorErrors, timeZone)
+            }
             className="flex items-center gap-2 rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white shadow-glow transition hover:bg-sky-400"
           >
             <Download className="h-3 w-3" />

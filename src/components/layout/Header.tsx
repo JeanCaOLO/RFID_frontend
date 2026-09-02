@@ -1,21 +1,22 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun, Wifi, WifiOff } from "lucide-react";
 import type { Theme } from "../../hooks/useTheme";
-import { formatTime } from "../../utils/formatters";
+import { formatTime, DEFAULT_TIME_ZONE } from "../../utils/formatters";
 
-const DEFAULT_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+// Zona del navegador (para ofrecer la opción "Hora local del dispositivo").
+const BROWSER_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 const TIME_ZONE_OPTIONS = [
-  { value: DEFAULT_TIME_ZONE, label: `Hora local (${DEFAULT_TIME_ZONE})` },
-  { value: "America/Caracas", label: "America/Caracas (Venezuela)" },
   {
     value: "America/Costa_Rica",
     label: "America/Costa_Rica (Costa Rica)"
   },
+  { value: "America/Caracas", label: "America/Caracas (Venezuela)" },
   {
     value: "America/Mexico_City",
     label: "America/Mexico_City (Mexico)"
   },
+  { value: BROWSER_TIME_ZONE, label: `Hora local (${BROWSER_TIME_ZONE})` },
   { value: "UTC", label: "UTC (Tiempo Universal Coordinado)" }
 ];
 
@@ -111,7 +112,7 @@ export const Header = ({
           </div>
           <div className="text-right">
             <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-              Hora ({timeZone === DEFAULT_TIME_ZONE ? "Local" : timeZone})
+              Hora ({timeZone.split("/").pop()?.replace("_", " ") ?? timeZone})
             </p>
             <p className="text-sm font-semibold text-slate-900 dark:text-slate-50">
               {formatTime(now.toISOString(), timeZone)}

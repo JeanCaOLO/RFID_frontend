@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { BarChart3, LayoutDashboard, Settings2 } from "lucide-react";
+import { DEFAULT_TIME_ZONE } from "./utils/formatters";
 import { Header } from "./components/layout/Header";
 import { ControlPanel } from "./components/layout/ControlPanel";
 import { KpiGrid } from "./components/dashboard/KpiGrid";
@@ -23,9 +24,7 @@ export default function App() {
   const [antennaFilter, setAntennaFilter] = useState<number | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [minRssiFilter, setMinRssiFilter] = useState<number | "all">("all");
-  const [timeZone, setTimeZone] = useState(
-    Intl.DateTimeFormat().resolvedOptions().timeZone
-  );
+  const [timeZone, setTimeZone] = useState(DEFAULT_TIME_ZONE);
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
@@ -94,6 +93,7 @@ export default function App() {
             <LiveMetricsDashboard
               tags={events}
               selectedAntenna={antennaFilter}
+              timeZone={timeZone}
             />
 
             <ControlPanel
@@ -102,7 +102,7 @@ export default function App() {
               onSearchChange={setSearchTerm}
               minRssiFilter={minRssiFilter}
               onMinRssiChange={setMinRssiFilter}
-              onExport={() => exportToExcel(filteredEvents)}
+              onExport={() => exportToExcel(filteredEvents, timeZone)}
               onTogglePause={togglePause}
               isPaused={isPaused}
               antennas={ANTENNAS}

@@ -20,13 +20,14 @@ const ANTENNA_COLORS: Record<number, { stroke: string; fill: string }> = {
 
 const getChartData = (
   events: RFIDTagEvent[],
-  filter: number | "all"
+  filter: number | "all",
+  timeZone?: string
 ) => {
   return events
     .slice(0, 40)
     .map((event) => {
       const base = {
-        time: formatTime(event.timestamp)
+        time: formatTime(event.timestamp, timeZone)
       } as Record<string, number | string | null>;
 
       if (filter === "all") {
@@ -46,11 +47,13 @@ const getChartData = (
 type RssiLineChartProps = {
   events: RFIDTagEvent[];
   selectedAntenna?: number | "all";
+  timeZone?: string;
 };
 
 export const RssiLineChart = ({
   events,
-  selectedAntenna
+  selectedAntenna,
+  timeZone
 }: RssiLineChartProps) => {
   const [activeFilter, setActiveFilter] = useState<number | "all">("all");
 
@@ -60,8 +63,8 @@ export const RssiLineChart = ({
     }
   }, [selectedAntenna]);
   const data = useMemo(
-    () => getChartData(events, activeFilter),
-    [events, activeFilter]
+    () => getChartData(events, activeFilter, timeZone),
+    [events, activeFilter, timeZone]
   );
 
   const antennasToRender =

@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { BarChart3, ChevronDown } from "lucide-react";
 import {
   Cell,
   Legend,
@@ -14,6 +15,7 @@ import { RssiLineChart } from "./RssiLineChart";
 type LiveMetricsDashboardProps = {
   tags: RFIDTagEvent[];
   selectedAntenna?: number | "all";
+  timeZone?: string;
 };
 
 const ANTENNA_COLORS = {
@@ -25,8 +27,11 @@ const ANTENNA_COLORS = {
 
 export const LiveMetricsDashboard = ({
   tags,
-  selectedAntenna
+  selectedAntenna,
+  timeZone
 }: LiveMetricsDashboardProps) => {
+  const [isOpen, setIsOpen] = useState(true);
+
   const filteredTags = useMemo(() => {
     if (!selectedAntenna || selectedAntenna === "all") return tags;
     return tags.filter((tag) => tag.antenna === selectedAntenna);
@@ -46,10 +51,32 @@ export const LiveMetricsDashboard = ({
   }, [filteredTags]);
 
   return (
-    <section className="grid gap-6 lg:grid-cols-2">
-      <RssiLineChart events={tags} selectedAntenna={selectedAntenna} />
+    <section className="rounded-2xl border border-slate-200 bg-white/60 shadow-sm transition-colors duration-300 dark:border-slate-700/50 dark:bg-slate-900/40">
+      <button
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex w-full items-center justify-between px-5 py-4"
+        aria-expanded={isOpen}
+      >
+        <span className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-slate-900 dark:text-sky-300">
+          <BarChart3 className="h-4 w-4 text-sky-500" />
+          Métricas en tiempo real
+        </span>
+        <ChevronDown
+          className={`h-5 w-5 text-slate-500 transition-transform duration-300 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-slate-700/50 dark:bg-[#0d1b2a]">
+      {isOpen && (
+        <div className="grid gap-6 px-5 pb-5 lg:grid-cols-2">
+          <RssiLineChart
+            events={tags}
+            selectedAntenna={selectedAntenna}
+            timeZone={timeZone}
+          />
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-slate-700/50 dark:bg-[#0d1b2a]">
         <div className="mb-2 flex items-center justify-between">
           <h3 className="text-xs uppercase tracking-[0.3em] text-slate-900 transition-colors duration-300 dark:text-sky-300">
             Distribución por antenas
@@ -93,8 +120,10 @@ export const LiveMetricsDashboard = ({
               />
             </RadialBarChart>
           </ResponsiveContainer>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 };

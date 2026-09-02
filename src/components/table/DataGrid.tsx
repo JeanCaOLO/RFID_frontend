@@ -16,6 +16,8 @@ type SortConfig = {
   direction: "asc" | "desc";
 };
 
+type ViewMode = "grouped" | "history";
+
 export const DataGrid = ({
   events,
   antennaFilter,
@@ -26,6 +28,7 @@ export const DataGrid = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [viewMode, setViewMode] = useState<ViewMode>("grouped");
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: "lastSeen",
     direction: "desc"
@@ -81,8 +84,28 @@ export const DataGrid = ({
     return Array.from(map.values());
   }, [events]);
 
+  // Modo historial: cada lectura individual como una fila (sin agrupar).
+  const historyEvents = useMemo<GroupedRFIDTag[]>(() => {
+    return events.map((event, index) => ({
+      epc: event.epc,
+      rssi: event.rssi,
+      antenna: event.antenna,
+      readerName: event.readerName,
+      dockDoor: event.dockDoor,
+      expectedDockDoor: event.expectedDockDoor,
+      firstSeen: event.timestamp,
+      lastSeen: event.timestamp,
+      readCount: 1,
+      isValid: event.isValid,
+      // clave única para React (mismo EPC puede repetirse)
+      _rowKey: `${event.epc}-${event.timestamp}-${index}`
+    })) as (GroupedRFIDTag & { _rowKey: string })[];
+  }, [events]);
+
+  const sourceEvents = viewMode === "grouped" ? groupedEvents : historyEvents;
+
   const sortedEvents = useMemo(() => {
-    const filtered = groupedEvents.filter((event) => {
+    const filtered = sourceEvents.filter((event) => {
       const antennaMatch =
         antennaFilter === "all"
           ? true
@@ -112,7 +135,7 @@ export const DataGrid = ({
     });
 
     return sorted;
-  }, [groupedEvents, antennaFilter, searchTerm, minRssiFilter, sortConfig]);
+  }, [sourceEvents, antennaFilter, searchTerm, minRssiFilter, sortConfig]);
 
   const totalPages = Math.max(
     1,
@@ -235,6 +258,43 @@ export const DataGrid = ({
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-glow transition-colors duration-300 dark:border-slate-700 dark:bg-slate-800">
+      {/* Toggle de vista: agrupado por tag vs historial cronológico */}
+      <div className="mb-3 flex items-center justify-between">
+        <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-900/60">
+          <button
+            onClick={() => {
+              setViewMode("grouped");
+              setCurrentPage(1);
+            }}
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+              viewMode === "grouped"
+                ? "bg-sky-500 text-white shadow-glow"
+                : "text-slate-600 dark:text-slate-300"
+            }`}
+          >
+            Agrupado por tag
+          </button>
+          <button
+            onClick={() => {
+              setViewMode("history");
+              setCurrentPage(1);
+            }}
+            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition ${
+              viewMode === "history"
+                ? "bg-sky-500 text-white shadow-glow"
+                : "text-slate-600 dark:text-slate-300"
+            }`}
+          >
+            Historial de lecturas
+          </button>
+        </div>
+        <span className="text-xs text-slate-500 dark:text-slate-400">
+          {viewMode === "grouped"
+            ? "Un registro por tag único"
+            : "Cada lectura individual (cronológico)"}
+        </span>
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -294,15 +354,17 @@ export const DataGrid = ({
                   {renderSortIcon("rssi")}
                 </button>
               </th>
-              <th
-                className="px-3 py-2 w-32 text-left transition-all hover:text-sky-400 cursor-pointer"
-                onClick={() => handleSort("readCount")}
-              >
-                <button className="flex w-full items-center justify-start gap-2">
-                  Veces leído
-                  {renderSortIcon("readCount")}
-                </button>
-              </th>
+              {viewMode === "grouped" && (
+                <th
+                  className="px-3 py-2 w-32 text-left transition-all hover:text-sky-400 cursor-pointer"
+                  onClick={() => handleSort("readCount")}
+                >
+                  <button className="flex w-full items-center justify-start gap-2">
+                    Veces leído
+                    {renderSortIcon("readCount")}
+                  </button>
+                </th>
+              )}
               <th
                 className="px-3 py-2 w-40 text-left transition-all hover:text-sky-400 cursor-pointer"
                 onClick={() => handleSort("lastSeen")}
@@ -336,9 +398,13 @@ export const DataGrid = ({
                 rowBgClass = "bg-sky-500/10"; // Flash azul si es normal y se actualizó
               }
 
+              const rowKey =
+                (event as GroupedRFIDTag & { _rowKey?: string })._rowKey ??
+                event.epc;
+
               return (
                 <tr
-                  key={event.epc}
+                  key={rowKey}
                   className={`border-t border-slate-200/70 transition-colors duration-300 dark:border-slate-700/60 ${rowBgClass}`}
                 >
                   {/* --- NUEVA CELDA: ESTADO --- */}
@@ -399,11 +465,13 @@ export const DataGrid = ({
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-3 w-32 text-left">
-                    <span className={`rounded-full px-2 py-1 text-xs font-mono ${isError ? 'bg-red-500/20 text-red-400' : 'bg-slate-200 text-sky-600 dark:bg-slate-700 dark:text-sky-400'}`}>
-                      {event.readCount}
-                    </span>
-                  </td>
+                  {viewMode === "grouped" && (
+                    <td className="px-3 py-3 w-32 text-left">
+                      <span className={`rounded-full px-2 py-1 text-xs font-mono ${isError ? 'bg-red-500/20 text-red-400' : 'bg-slate-200 text-sky-600 dark:bg-slate-700 dark:text-sky-400'}`}>
+                        {event.readCount}
+                      </span>
+                    </td>
+                  )}
                   <td className="px-3 py-3 w-40 text-left text-slate-600 dark:text-slate-200">
                     {formatTime(event.lastSeen, timeZone)}
                   </td>
@@ -419,7 +487,8 @@ export const DataGrid = ({
         <span className="font-mono">
           Mostrando {(currentPage - 1) * ITEMS_PER_PAGE + 1} a{" "}
           {Math.min(currentPage * ITEMS_PER_PAGE, sortedEvents.length)} de{" "}
-          {sortedEvents.length} tags únicos
+          {sortedEvents.length}{" "}
+          {viewMode === "grouped" ? "tags únicos" : "lecturas"}
         </span>
         <div className="flex flex-wrap items-center gap-2">
           <button

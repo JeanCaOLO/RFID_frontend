@@ -3,7 +3,7 @@ import type { RFIDTagEvent } from "../types/rfid.types";
 import { formatDateTime } from "../utils/formatters";
 
 export const useExport = () => {
-  const exportToExcel = (events: RFIDTagEvent[]) => {
+  const exportToExcel = (events: RFIDTagEvent[], timeZone?: string) => {
     if (!events.length) {
       alert("No hay datos para exportar.");
       return;
@@ -31,7 +31,7 @@ export const useExport = () => {
       event.expectedDockDoor ?? "",
       event.isValid ? "OK" : "ERROR",
       event.rssi,
-      formatDateTime(event.timestamp)
+      formatDateTime(event.timestamp, timeZone)
     ]);
 
     const wsData = [[title], [date], [], headerRow, ...dataRows];
@@ -113,7 +113,8 @@ export const useExport = () => {
       total: number;
       errors: number;
       errorRate: number;
-    }[]
+    }[],
+    timeZone?: string
   ) => {
     if (!errors.length && !doorSummary.length) {
       alert("No hay datos para exportar.");
@@ -131,7 +132,7 @@ export const useExport = () => {
       "Puerta Esperada": e.expectedDockDoor ?? "",
       RSSI: e.rssi,
       Motivo: e.reason ?? "",
-      Fecha: formatDateTime(e.timestamp)
+      Fecha: formatDateTime(e.timestamp, timeZone)
     }));
     const detailSheet = XLSX.utils.json_to_sheet(
       detailRows.length ? detailRows : [{ Info: "Sin errores en el rango" }]
