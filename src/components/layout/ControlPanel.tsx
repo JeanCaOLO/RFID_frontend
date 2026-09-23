@@ -77,7 +77,7 @@ export const ControlPanel = ({
             <Search className="h-4 w-4 text-slate-400" />
             <input
               className="w-44 bg-transparent text-sm text-text outline-none"
-              placeholder="Buscar EPC"
+              placeholder="Buscar pallet o EPC"
               onChange={(event) => onSearchChange(event.target.value)}
             />
           </div>

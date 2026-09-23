@@ -329,6 +329,7 @@ export const ReportsView = ({ timeZone }: { timeZone: string }) => {
               <table className="w-full text-left text-sm">
                 <thead className="sticky top-0 bg-white text-xs uppercase tracking-wider text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                   <tr>
+                    <th className="px-3 py-2">Pallet</th>
                     <th className="px-3 py-2">EPC</th>
                     <th className="px-3 py-2">Lector / Antena</th>
                     <th className="px-3 py-2">Puerta leída</th>
@@ -342,7 +343,8 @@ export const ReportsView = ({ timeZone }: { timeZone: string }) => {
                       key={`${e.epc}-${i}`}
                       className="border-t border-slate-200/70 dark:border-slate-700/60"
                     >
-                      <td className="px-3 py-2 font-mono text-red-400">{e.epc}</td>
+                      <td className="px-3 py-2 font-semibold text-red-400">{e.pallet ?? "—"}</td>
+                      <td className="px-3 py-2 font-mono text-xs text-slate-500 dark:text-slate-400">{e.epc}</td>
                       <td className="px-3 py-2 text-slate-600 dark:text-slate-300">
                         {e.readerName} · Ant {e.antenna}
                       </td>
@@ -361,7 +363,7 @@ export const ReportsView = ({ timeZone }: { timeZone: string }) => {
                   ))}
                   {errorDetails.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="px-3 py-6 text-center text-emerald-500">
+                      <td colSpan={6} className="px-3 py-6 text-center text-emerald-500">
                         Sin errores de despacho en el rango. Operación limpia.
                       </td>
                     </tr>

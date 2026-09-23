@@ -13,25 +13,29 @@ export const AntennaMapping = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [dockDoor, setDockDoor] = useState("");
   const [zoneName, setZoneName] = useState("");
+  const [wmsReaderId, setWmsReaderId] = useState("");
   const [saving, setSaving] = useState(false);
 
   const startEdit = (row: AntennaRow) => {
     setEditingId(row.id);
     setDockDoor(row.dock_door ?? "");
     setZoneName(row.zone_name ?? "");
+    setWmsReaderId(row.wms_reader_id ?? "");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setDockDoor("");
     setZoneName("");
+    setWmsReaderId("");
   };
 
   const saveEdit = async (id: number) => {
     setSaving(true);
     const ok = await updateAntenna(id, {
       dock_door: dockDoor.trim() || null,
-      zone_name: zoneName.trim() || null
+      zone_name: zoneName.trim() || null,
+      wms_reader_id: wmsReaderId.trim() || null
     });
     setSaving(false);
     if (ok) cancelEdit();
@@ -73,6 +77,7 @@ export const AntennaMapping = () => {
               <tr>
                 <th className="px-3 py-2">Lector</th>
                 <th className="px-3 py-2">Antena</th>
+                <th className="px-3 py-2">Reader ID (WMS)</th>
                 <th className="px-3 py-2">Puerta de despacho</th>
                 <th className="px-3 py-2">Zona</th>
                 <th className="px-3 py-2 text-right">Acción</th>
@@ -91,6 +96,20 @@ export const AntennaMapping = () => {
                     </td>
                     <td className="px-3 py-3 text-slate-600 dark:text-slate-300">
                       Antena {row.antenna_port}
+                    </td>
+                    <td className="px-3 py-3">
+                      {isEditing ? (
+                        <input
+                          value={wmsReaderId}
+                          onChange={(e) => setWmsReaderId(e.target.value)}
+                          className="w-44 rounded-lg border border-slate-300 bg-transparent px-2 py-1 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-sky-500/50 dark:border-slate-600 dark:text-slate-100"
+                          placeholder="ANTENA_PUERTA_1"
+                        />
+                      ) : (
+                        <span className="font-mono text-amber-600 dark:text-amber-400">
+                          {row.wms_reader_id ?? "—"}
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-3">
                       {isEditing ? (
@@ -159,7 +178,7 @@ export const AntennaMapping = () => {
               {antennas.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-3 py-6 text-center text-slate-500 dark:text-slate-400"
                   >
                     No hay antenas configuradas. Ejecuta el script SQL en

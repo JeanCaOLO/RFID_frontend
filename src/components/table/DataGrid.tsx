@@ -48,11 +48,13 @@ export const DataGrid = ({
       if (!existing) {
         map.set(event.epc, {
           epc: event.epc,
+          pallet: event.pallet,
           rssi: event.rssi,
           antenna: event.antenna,
           readerName: event.readerName,
           dockDoor: event.dockDoor,
           expectedDockDoor: event.expectedDockDoor,
+          reason: event.reason,
           firstSeen: event.timestamp,
           lastSeen: event.timestamp,
           readCount: 1,
@@ -67,11 +69,13 @@ export const DataGrid = ({
 
       if (eventTime >= lastSeenTime) {
         existing.lastSeen = event.timestamp;
+        existing.pallet = event.pallet;
         existing.rssi = event.rssi;
         existing.antenna = event.antenna;
         existing.readerName = event.readerName;
         existing.dockDoor = event.dockDoor;
         existing.expectedDockDoor = event.expectedDockDoor;
+        existing.reason = event.reason;
         existing.isValid = event.isValid; // Actualizamos validación
       }
       if (eventTime < firstSeenTime) {
@@ -88,11 +92,13 @@ export const DataGrid = ({
   const historyEvents = useMemo<GroupedRFIDTag[]>(() => {
     return events.map((event, index) => ({
       epc: event.epc,
+      pallet: event.pallet,
       rssi: event.rssi,
       antenna: event.antenna,
       readerName: event.readerName,
       dockDoor: event.dockDoor,
       expectedDockDoor: event.expectedDockDoor,
+      reason: event.reason,
       firstSeen: event.timestamp,
       lastSeen: event.timestamp,
       readCount: 1,
@@ -110,9 +116,10 @@ export const DataGrid = ({
         antennaFilter === "all"
           ? true
           : String(event.antenna) === String(antennaFilter);
-      const searchMatch = event.epc
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
+      const term = searchTerm.toLowerCase();
+      const searchMatch =
+        event.epc.toLowerCase().includes(term) ||
+        (event.pallet ?? "").toLowerCase().includes(term);
       const rssiMatch =
         minRssiFilter === "all" ? true : event.rssi >= minRssiFilter;
       return antennaMatch && searchMatch && rssiMatch;
@@ -311,11 +318,11 @@ export const DataGrid = ({
               </th>
               <th
                 className="px-3 py-2 w-[30%] text-left transition-all hover:text-sky-400 cursor-pointer"
-                onClick={() => handleSort("epc")}
+                onClick={() => handleSort("pallet")}
               >
                 <button className="flex w-full items-center justify-start gap-2">
-                  EPC
-                  {renderSortIcon("epc")}
+                  Pallet
+                  {renderSortIcon("pallet")}
                 </button>
               </th>
               <th
@@ -336,14 +343,10 @@ export const DataGrid = ({
                   {renderSortIcon("dockDoor")}
                 </button>
               </th>
-              <th
-                className="px-3 py-2 w-36 text-left transition-all hover:text-sky-400 cursor-pointer"
-                onClick={() => handleSort("expectedDockDoor")}
-              >
-                <button className="flex w-full items-center justify-start gap-2">
-                  Puerta Esperada
-                  {renderSortIcon("expectedDockDoor")}
-                </button>
+              <th className="px-3 py-2 w-64 text-left">
+                <span className="flex w-full items-center justify-start gap-2">
+                  Motivo (WMS)
+                </span>
               </th>
               <th
                 className="px-3 py-2 w-40 text-left transition-all hover:text-sky-400 cursor-pointer"
@@ -421,8 +424,18 @@ export const DataGrid = ({
                       </div>
                     )}
                   </td>
-                  <td className={`px-3 py-3 w-[30%] text-left font-semibold ${isError ? 'text-red-400' : 'text-primary'}`}>
-                    {event.epc}
+                  <td className={`px-3 py-3 w-[30%] text-left ${isError ? 'text-red-400' : 'text-primary'}`}>
+                    <div className="flex flex-col">
+                      <span className="font-semibold">
+                        {event.pallet ?? "—"}
+                      </span>
+                      <span
+                        className="text-[11px] font-mono text-slate-400 dark:text-slate-500"
+                        title={`EPC: ${event.epc}`}
+                      >
+                        {event.epc}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-3 py-3 w-32 text-left">
                     <span className="text-slate-700 dark:text-slate-200">
@@ -441,15 +454,16 @@ export const DataGrid = ({
                       {event.dockDoor ?? "—"}
                     </span>
                   </td>
-                  <td className="px-3 py-3 w-36 text-left">
+                  <td className="px-3 py-3 w-64 text-left">
                     <span
                       className={
                         isError
-                          ? "text-xs bg-red-500/20 text-red-300 px-2 py-0.5 rounded border border-red-500/30 w-fit"
-                          : "text-slate-700 dark:text-slate-200"
+                          ? "text-xs text-red-400"
+                          : "text-xs text-slate-500 dark:text-slate-400"
                       }
+                      title={event.reason ?? ""}
                     >
-                      {event.expectedDockDoor ?? event.dockDoor ?? "—"}
+                      {event.reason ?? "—"}
                     </span>
                   </td>
                   <td className="px-3 py-3 w-40 text-left">

@@ -6,6 +6,7 @@ export type DateRangePreset = "24h" | "7d" | "30d" | "all";
 
 const mapRow = (row: TagReadRow): RFIDTagEvent => ({
   epc: row.epc,
+  pallet: row.pallet ?? null,
   rssi: Number(row.rssi ?? 0),
   antenna: Number(row.antenna_port ?? 0),
   readerName: row.reader_name,

@@ -13,6 +13,7 @@ export const useExport = () => {
     const date = `Generado: ${new Date().toLocaleString()}`;
 
     const headerRow = [
+      "Pallet",
       "EPC",
       "Lector",
       "Antena",
@@ -24,6 +25,7 @@ export const useExport = () => {
     ];
 
     const dataRows = events.map((event) => [
+      event.pallet ?? "",
       event.epc,
       event.readerName,
       event.antenna,
@@ -39,8 +41,8 @@ export const useExport = () => {
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
     ws["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } }
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } }
     ];
 
     const baseBorder = {
@@ -67,7 +69,7 @@ export const useExport = () => {
       alignment: { horizontal: "center" }
     };
 
-    const COLS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+    const COLS = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
     COLS.map((c) => `${c}4`).forEach((cell) => {
       if (ws[cell]) ws[cell].s = headerStyle;
     });
@@ -85,8 +87,9 @@ export const useExport = () => {
       });
     }
 
-    ws["!autofilter"] = { ref: `A4:H${totalRows}` };
+    ws["!autofilter"] = { ref: `A4:I${totalRows}` };
     ws["!cols"] = [
+      { wch: 14 },
       { wch: 35 },
       { wch: 12 },
       { wch: 8 },
@@ -125,6 +128,7 @@ export const useExport = () => {
 
     // Hoja 1: detalle de tags con error
     const detailRows = errors.map((e) => ({
+      Pallet: e.pallet ?? "",
       EPC: e.epc,
       Lector: e.readerName,
       Antena: e.antenna,
@@ -138,6 +142,7 @@ export const useExport = () => {
       detailRows.length ? detailRows : [{ Info: "Sin errores en el rango" }]
     );
     detailSheet["!cols"] = [
+      { wch: 14 },
       { wch: 30 },
       { wch: 12 },
       { wch: 8 },

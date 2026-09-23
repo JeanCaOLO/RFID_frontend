@@ -46,7 +46,12 @@ export const useAntennaMapping = () => {
   const updateAntenna = useCallback(
     async (
       id: number,
-      changes: Partial<Pick<AntennaRow, "dock_door" | "zone_name" | "is_active">>
+      changes: Partial<
+        Pick<
+          AntennaRow,
+          "dock_door" | "zone_name" | "wms_reader_id" | "is_active"
+        >
+      >
     ) => {
       const { error: updateError } = await supabase
         .from("antennas")
