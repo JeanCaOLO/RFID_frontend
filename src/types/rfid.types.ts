@@ -94,11 +94,22 @@ export type TruckLoadRow = {
   closed_at: string | null;
 };
 
-// Pallets de una placa agrupados para el módulo Carga Camión
+// Pallets pendientes de una placa (vista "En carga" del módulo Carga Camión)
 export type TruckLoadGroup = {
   placa: string;
   pallets: TruckLoadRow[];
-  loadedCount: number;
-  closedCount: number;
-  allClosed: boolean;
+  // Pallets que se pueden cerrar (en carga o con error de cierre)
+  pendingCount: number;
+  isClosing: boolean;
+};
+
+// Una ejecución de "carga camión": pallets de una placa cerrados juntos
+// (el backend les pone el mismo closed_at).
+export type TruckLoadHistoryEntry = {
+  key: string;
+  placa: string;
+  closedAt: string;
+  pallets: TruckLoadRow[];
+  doors: string[];
+  firstLoadedAt: string;
 };
