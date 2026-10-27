@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   AlertTriangle,
   MonitorSmartphone,
+  Search,
   X
 } from "lucide-react";
 import type { RFIDTagEvent } from "../../types/rfid.types";
@@ -13,7 +14,10 @@ type MonitorViewProps = {
   timeZone: string;
 };
 
+type StatusFilter = "all" | "ok" | "error";
+
 const POPUP_MS = 4000;
+const ANTENNAS = [1, 2, 3, 4];
 
 /**
  * Vista operativa "Monitor".
@@ -26,6 +30,10 @@ const POPUP_MS = 4000;
  */
 export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
   const [popup, setPopup] = useState<RFIDTagEvent | null>(null);
+  const [palletFilter, setPalletFilter] = useState("");
+  const [reasonFilter, setReasonFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [antennaFilter, setAntennaFilter] = useState<number | "all">("all");
   const lastKeyRef = useRef<string | null>(null);
   const timerRef = useRef<number | null>(null);
 
@@ -54,15 +62,127 @@ export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
     };
   }, []);
 
-  const recent = events.slice(0, 40);
+  const recent = useMemo(() => {
+    const reasonTerm = reasonFilter.trim().toLowerCase();
+    const palletTerm = palletFilter.trim().toLowerCase();
+    return events
+      .filter((event) => {
+        const statusMatch =
+          statusFilter === "all"
+            ? true
+            : statusFilter === "ok"
+            ? event.isValid
+            : !event.isValid;
+        const reasonMatch = reasonTerm
+          ? (event.reason ?? "").toLowerCase().includes(reasonTerm)
+          : true;
+        const palletMatch = palletTerm
+          ? (event.pallet ?? "").toLowerCase().includes(palletTerm) ||
+            event.epc.toLowerCase().includes(palletTerm)
+          : true;
+        const antennaMatch =
+          antennaFilter === "all" ? true : event.antenna === antennaFilter;
+        return statusMatch && reasonMatch && palletMatch && antennaMatch;
+      })
+      .slice(0, 40);
+  }, [events, palletFilter, reasonFilter, statusFilter, antennaFilter]);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-slate-700 dark:bg-slate-800">
-      <div className="mb-4 flex items-center gap-2">
-        <MonitorSmartphone className="h-5 w-5 text-sky-500" />
-        <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-900 dark:text-sky-300">
-          Monitor operativo
-        </h3>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <MonitorSmartphone className="h-5 w-5 text-sky-500" />
+          <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-900 dark:text-sky-300">
+            Monitor operativo
+          </h3>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Buscador por pallet (o EPC) */}
+          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900/60">
+            <Search className="h-4 w-4 text-slate-400" />
+            <input
+              value={palletFilter}
+              onChange={(e) => setPalletFilter(e.target.value)}
+              placeholder="Buscar pallet"
+              className="w-40 bg-transparent text-sm text-slate-700 outline-none dark:text-slate-200"
+            />
+            {palletFilter && (
+              <button
+                onClick={() => setPalletFilter("")}
+                aria-label="Limpiar búsqueda de pallet"
+                className="text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Filtro por texto del motivo (WMS) */}
+          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900/60">
+            <Search className="h-4 w-4 text-slate-400" />
+            <input
+              value={reasonFilter}
+              onChange={(e) => setReasonFilter(e.target.value)}
+              placeholder="Filtrar por motivo"
+              className="w-44 bg-transparent text-sm text-slate-700 outline-none dark:text-slate-200"
+            />
+            {reasonFilter && (
+              <button
+                onClick={() => setReasonFilter("")}
+                aria-label="Limpiar filtro"
+                className="text-slate-400 transition hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Filtro por antena */}
+          <select
+            value={antennaFilter}
+            onChange={(e) =>
+              setAntennaFilter(
+                e.target.value === "all" ? "all" : Number(e.target.value)
+              )
+            }
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-sky-500/50 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200"
+          >
+            <option value="all">Todas las antenas</option>
+            {ANTENNAS.map((ant) => (
+              <option key={ant} value={ant}>
+                Antena {ant}
+              </option>
+            ))}
+          </select>
+
+          {/* Filtro rápido por estado */}
+          <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-900/60">
+            {(
+              [
+                { id: "all", label: "Todos" },
+                { id: "ok", label: "OK" },
+                { id: "error", label: "Error" }
+              ] as { id: StatusFilter; label: string }[]
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => setStatusFilter(opt.id)}
+                className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                  statusFilter === opt.id
+                    ? opt.id === "error"
+                      ? "bg-red-500 text-white"
+                      : opt.id === "ok"
+                      ? "bg-emerald-500 text-white"
+                      : "bg-sky-500 text-white"
+                    : "text-slate-600 dark:text-slate-300"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -148,7 +268,12 @@ export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
                   colSpan={6}
                   className="px-3 py-12 text-center text-slate-500 dark:text-slate-400"
                 >
-                  Esperando lecturas de las antenas…
+                  {palletFilter ||
+                  reasonFilter ||
+                  statusFilter !== "all" ||
+                  antennaFilter !== "all"
+                    ? "Ninguna lectura coincide con el filtro."
+                    : "Esperando lecturas de las antenas…"}
                 </td>
               </tr>
             )}

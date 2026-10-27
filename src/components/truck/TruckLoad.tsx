@@ -6,11 +6,17 @@ import {
   Loader2,
   CheckCircle2,
   AlertTriangle,
-  Package
+  Package,
+  X
 } from "lucide-react";
 import { useTruckLoad } from "../../hooks/useTruckLoad";
 import type { TruckLoadRow } from "../../types/rfid.types";
 import { formatTime } from "../../utils/formatters";
+
+// Descripción del cierre pendiente de confirmar.
+type PendingClose =
+  | { type: "one"; placa: string }
+  | { type: "all"; placas: string[] };
 
 type TruckLoadProps = {
   timeZone: string;
@@ -57,18 +63,34 @@ export const TruckLoad = ({ timeZone }: TruckLoadProps) => {
   } = useTruckLoad();
   const [closingPlaca, setClosingPlaca] = useState<string | null>(null);
   const [closingAll, setClosingAll] = useState(false);
+  // Cierre pendiente de confirmación (null = sin modal).
+  const [pending, setPending] = useState<PendingClose | null>(null);
 
-  const handleClose = async (placa: string) => {
-    setClosingPlaca(placa);
-    await executeClose(placa);
-    // El estado real ('closed'/'error') llega por Realtime desde el backend.
-    setClosingPlaca(null);
-  };
+  // Placas con pallets pendientes de cerrar (loaded / error).
+  const pendingPlacas = groups
+    .filter((g) => !g.allClosed && g.loadedCount > 0)
+    .map((g) => g.placa);
 
-  const handleCloseAll = async () => {
-    setClosingAll(true);
-    await executeCloseAll();
-    setClosingAll(false);
+  // Paso 1: el botón solo abre la confirmación.
+  const askClose = (placa: string) => setPending({ type: "one", placa });
+  const askCloseAll = () =>
+    setPending({ type: "all", placas: pendingPlacas });
+
+  // Paso 2: al confirmar, se ejecuta realmente el cierre.
+  const confirmClose = async () => {
+    if (!pending) return;
+    const action = pending;
+    setPending(null);
+
+    if (action.type === "one") {
+      setClosingPlaca(action.placa);
+      await executeClose(action.placa);
+      setClosingPlaca(null);
+    } else {
+      setClosingAll(true);
+      await executeCloseAll();
+      setClosingAll(false);
+    }
   };
 
   return (
@@ -82,7 +104,7 @@ export const TruckLoad = ({ timeZone }: TruckLoadProps) => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={handleCloseAll}
+            onClick={askCloseAll}
             disabled={!hasPending || closingAll}
             className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold transition ${
               !hasPending
@@ -188,7 +210,7 @@ export const TruckLoad = ({ timeZone }: TruckLoadProps) => {
               </ul>
 
               <button
-                onClick={() => handleClose(group.placa)}
+                onClick={() => askClose(group.placa)}
                 disabled={isClosing || group.allClosed || pendientes === 0}
                 className={`flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
                   group.allClosed
@@ -219,6 +241,88 @@ export const TruckLoad = ({ timeZone }: TruckLoadProps) => {
           );
         })}
       </div>
+
+      {pending && (
+        <ConfirmDialog
+          pending={pending}
+          onCancel={() => setPending(null)}
+          onConfirm={confirmClose}
+        />
+      )}
     </section>
+  );
+};
+
+type ConfirmDialogProps = {
+  pending: PendingClose;
+  onCancel: () => void;
+  onConfirm: () => void;
+};
+
+const ConfirmDialog = ({ pending, onCancel, onConfirm }: ConfirmDialogProps) => {
+  const isAll = pending.type === "all";
+  const count = isAll ? pending.placas.length : 1;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800">
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-amber-500/15 text-amber-500">
+            <AlertTriangle className="h-6 w-6" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Confirmar cierre de carga
+          </h3>
+        </div>
+
+        {isAll ? (
+          <div className="mb-6 text-sm text-slate-600 dark:text-slate-300">
+            {count === 0 ? (
+              <p>No hay cargas pendientes por cerrar.</p>
+            ) : (
+              <>
+                <p className="mb-2">
+                  ¿Seguro que quieres cerrar <b>todas</b> las cargas pendientes?
+                  Se cerrarán {count} placa{count !== 1 ? "s" : ""}:
+                </p>
+                <ul className="max-h-40 space-y-1 overflow-y-auto rounded-lg bg-slate-100 p-2 font-mono text-xs dark:bg-slate-900/60">
+                  {pending.placas.map((placa) => (
+                    <li key={placa} className="text-slate-700 dark:text-slate-200">
+                      {placa}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        ) : (
+          <p className="mb-6 text-sm text-slate-600 dark:text-slate-300">
+            ¿Seguro que quieres cerrar la carga camión de la placa{" "}
+            <b className="font-mono text-slate-900 dark:text-slate-100">
+              {pending.placa}
+            </b>
+            ?
+          </p>
+        )}
+
+        <div className="flex justify-end gap-3">
+          <button
+            onClick={onCancel}
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+          >
+            <X className="h-4 w-4" />
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isAll && count === 0}
+            className="flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <PackageCheck className="h-4 w-4" />
+            {isAll ? "Cerrar todas" : "Sí, cerrar"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };

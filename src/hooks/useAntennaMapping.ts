@@ -41,6 +41,33 @@ export const useAntennaMapping = () => {
 
   useEffect(() => {
     load();
+
+    // El backend actualiza estado y potencia aplicada: reflejarlo en vivo.
+    const channel = supabase
+      .channel("antenna_mapping_stream")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "antennas" },
+        (payload) => {
+          const row = payload.new as AntennaRow;
+          setAntennas((prev) =>
+            prev.map((a) => (a.id === row.id ? { ...row, readers: a.readers } : a))
+          );
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "readers" },
+        (payload) => {
+          const row = payload.new as ReaderRow;
+          setReaders((prev) => prev.map((r) => (r.id === row.id ? row : r)));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [load]);
 
   const updateAntenna = useCallback(
@@ -49,7 +76,11 @@ export const useAntennaMapping = () => {
       changes: Partial<
         Pick<
           AntennaRow,
-          "dock_door" | "zone_name" | "wms_reader_id" | "is_active"
+          | "dock_door"
+          | "zone_name"
+          | "wms_reader_id"
+          | "is_active"
+          | "tx_power_dbm"
         >
       >
     ) => {

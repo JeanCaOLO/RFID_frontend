@@ -72,8 +72,13 @@ export const useTruckLoad = () => {
 
     return Array.from(map.entries())
       .map(([placa, pallets]) => {
+        // Pendientes de cerrar: los que están en carga, cerrándose o que
+        // fallaron el cierre (para poder reintentar).
         const loadedCount = pallets.filter(
-          (p) => p.status === "loaded" || p.status === "closing"
+          (p) =>
+            p.status === "loaded" ||
+            p.status === "closing" ||
+            p.status === "error"
         ).length;
         const closedCount = pallets.filter((p) => p.status === "closed").length;
         return {

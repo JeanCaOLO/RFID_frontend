@@ -51,8 +51,16 @@ export type AntennaRow = {
   zone_name: string | null;
   wms_reader_id: string | null;
   is_active: boolean;
+  // Potencia deseada (null = la por defecto del backend) y la aplicada en el lector.
+  tx_power_dbm: number | null;
+  applied_tx_power_dbm: number | null;
+  // Estado físico reportado por el backend.
+  connection_status: AntennaConnectionStatus;
+  status_at: string | null;
   readers?: { name: string } | null;
 };
+
+export type AntennaConnectionStatus = "connected" | "disconnected" | "unknown";
 
 export type ReaderRow = {
   id: number;
@@ -60,6 +68,17 @@ export type ReaderRow = {
   host: string | null;
   port: number | null;
   is_active: boolean;
+  is_online: boolean;
+  last_seen_at: string | null;
+  last_error: string | null;
+  max_tx_power_dbm: number | null;
+};
+
+// Lector con sus antenas, para el panel de estado
+export type ReaderStatus = ReaderRow & {
+  antennas: AntennaRow[];
+  // El backend dejó de reportar (heartbeat vencido): el estado no es confiable.
+  isStale: boolean;
 };
 
 // Fila de la tabla `truck_load` (Carga Camión)

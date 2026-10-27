@@ -15,7 +15,12 @@ import { AntennaMapping } from "./components/mapping/AntennaMapping";
 import { ReportsView } from "./components/reports/ReportsView";
 import { MonitorView } from "./components/monitor/MonitorView";
 import { TruckLoad } from "./components/truck/TruckLoad";
+import {
+  ReaderAlertBanner,
+  ReaderStatusPanel
+} from "./components/readers/ReaderStatusPanel";
 import { useRFIDStream } from "./hooks/useRFIDStream";
+import { useReaderStatus } from "./hooks/useReaderStatus";
 import { useExport } from "./hooks/useExport";
 import { useTheme } from "./hooks/useTheme";
 import { useTimeZone } from "./hooks/useTimeZone";
@@ -37,6 +42,7 @@ export default function App() {
   const { exportToExcel } = useExport();
   const { theme, toggleTheme } = useTheme();
   const { timeZone, setTimeZone } = useTimeZone();
+  const readerStatus = useReaderStatus();
   const [tab, setTab] = useState<Tab>("dashboard");
   const [antennaFilter, setAntennaFilter] = useState<number | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -67,6 +73,8 @@ export default function App() {
       />
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pb-12">
+        <ReaderAlertBanner issues={readerStatus.issues} />
+
         <nav className="mt-6 flex flex-wrap gap-2">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
@@ -86,6 +94,12 @@ export default function App() {
 
         {tab === "dashboard" ? (
           <>
+            <ReaderStatusPanel
+              readers={readerStatus.readers}
+              loading={readerStatus.loading}
+              backendStale={readerStatus.backendStale}
+            />
+
             <KpiGrid tags={events} />
 
             <LiveMetricsDashboard

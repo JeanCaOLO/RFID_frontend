@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Moon, Sun, Wifi, WifiOff } from "lucide-react";
 import type { Theme } from "../../hooks/useTheme";
-import { formatTime, DEFAULT_TIME_ZONE } from "../../utils/formatters";
+import { formatTime } from "../../utils/formatters";
 
 // Zona del navegador (para ofrecer la opción "Hora local del dispositivo").
 const BROWSER_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -46,11 +46,8 @@ export const Header = ({
     <header className="border-b border-slate-200 bg-white/80 backdrop-blur transition-colors duration-300 dark:border-slate-700 dark:bg-slate-800/80">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-5">
         <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-sky-500">
-            FXR90
-          </p>
           <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-50">
-            Epic RFID Command Center
+            Monitor RFID
           </h1>
         </div>
 

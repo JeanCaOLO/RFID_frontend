@@ -3,24 +3,47 @@ import { Check, Loader2, MapPin, Pencil, RefreshCw, X } from "lucide-react";
 import { useAntennaMapping } from "../../hooks/useAntennaMapping";
 import type { AntennaRow } from "../../types/rfid.types";
 
+// Máximo si el backend aún no reportó el de la región del lector.
+const DEFAULT_MAX_POWER = 24;
+
+const STATUS_DOT: Record<AntennaRow["connection_status"], string> = {
+  connected: "bg-emerald-500",
+  disconnected: "bg-red-500 animate-pulse",
+  unknown: "bg-slate-400"
+};
+
+const STATUS_LABEL: Record<AntennaRow["connection_status"], string> = {
+  connected: "Conectada",
+  disconnected: "Desconectada",
+  unknown: "Sin datos"
+};
+
 /**
  * Módulo de configuración del mapeo Antena -> Puerta de despacho.
  * Escribe directamente en la tabla `antennas` de Supabase.
  */
 export const AntennaMapping = () => {
-  const { antennas, loading, error, reload, updateAntenna } =
+  const { antennas, readers, loading, error, reload, updateAntenna } =
     useAntennaMapping();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [dockDoor, setDockDoor] = useState("");
   const [zoneName, setZoneName] = useState("");
   const [wmsReaderId, setWmsReaderId] = useState("");
+  const [txPower, setTxPower] = useState("");
+  const [powerError, setPowerError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const maxPowerFor = (row: AntennaRow) =>
+    readers.find((r) => r.id === row.reader_id)?.max_tx_power_dbm ??
+    DEFAULT_MAX_POWER;
 
   const startEdit = (row: AntennaRow) => {
     setEditingId(row.id);
     setDockDoor(row.dock_door ?? "");
     setZoneName(row.zone_name ?? "");
     setWmsReaderId(row.wms_reader_id ?? "");
+    setTxPower(row.tx_power_dbm === null ? "" : String(row.tx_power_dbm));
+    setPowerError(null);
   };
 
   const cancelEdit = () => {
@@ -28,14 +51,24 @@ export const AntennaMapping = () => {
     setDockDoor("");
     setZoneName("");
     setWmsReaderId("");
+    setTxPower("");
+    setPowerError(null);
   };
 
-  const saveEdit = async (id: number) => {
+  const saveEdit = async (row: AntennaRow) => {
+    // Vacío = usar la potencia por defecto del backend (TX_POWER_DBM).
+    const power = txPower.trim() === "" ? null : Number(txPower);
+    const max = maxPowerFor(row);
+    if (power !== null && (Number.isNaN(power) || power < 0 || power > max)) {
+      setPowerError(`La potencia debe estar entre 0 y ${max} dBm`);
+      return;
+    }
     setSaving(true);
-    const ok = await updateAntenna(id, {
+    const ok = await updateAntenna(row.id, {
       dock_door: dockDoor.trim() || null,
       zone_name: zoneName.trim() || null,
-      wms_reader_id: wmsReaderId.trim() || null
+      wms_reader_id: wmsReaderId.trim() || null,
+      tx_power_dbm: power
     });
     setSaving(false);
     if (ok) cancelEdit();
@@ -80,6 +113,8 @@ export const AntennaMapping = () => {
                 <th className="px-3 py-2">Reader ID (WMS)</th>
                 <th className="px-3 py-2">Puerta de despacho</th>
                 <th className="px-3 py-2">Zona</th>
+                <th className="px-3 py-2">Estado</th>
+                <th className="px-3 py-2">Potencia (dBm)</th>
                 <th className="px-3 py-2 text-right">Acción</th>
               </tr>
             </thead>
@@ -139,11 +174,60 @@ export const AntennaMapping = () => {
                         </span>
                       )}
                     </td>
+                    <td className="px-3 py-3">
+                      <span className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                        <span
+                          className={`h-2.5 w-2.5 rounded-full ${STATUS_DOT[row.connection_status] ?? STATUS_DOT.unknown}`}
+                        />
+                        {STATUS_LABEL[row.connection_status] ?? STATUS_LABEL.unknown}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">
+                      {isEditing ? (
+                        <div>
+                          <input
+                            type="number"
+                            min={0}
+                            max={maxPowerFor(row)}
+                            step={0.5}
+                            value={txPower}
+                            onChange={(e) => setTxPower(e.target.value)}
+                            className="w-24 rounded-lg border border-slate-300 bg-transparent px-2 py-1 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-sky-500/50 dark:border-slate-600 dark:text-slate-100"
+                            placeholder="Defecto"
+                            title={`0 a ${maxPowerFor(row)} dBm. Vacío = valor por defecto del backend`}
+                          />
+                          {powerError && (
+                            <p className="mt-1 text-xs text-red-500">{powerError}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-slate-600 dark:text-slate-300">
+                          <span className="font-mono">
+                            {row.applied_tx_power_dbm ?? "—"}
+                          </span>
+                          {row.tx_power_dbm !== null &&
+                            Number(row.tx_power_dbm) !==
+                              Number(row.applied_tx_power_dbm) && (
+                              <span
+                                className="ml-2 text-xs text-amber-500"
+                                title="El backend aplicará este valor en el lector en unos segundos"
+                              >
+                                → {row.tx_power_dbm} (aplicando)
+                              </span>
+                            )}
+                          {row.tx_power_dbm === null && (
+                            <span className="ml-2 text-xs text-slate-400">
+                              (defecto)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-3 py-3 text-right">
                       {isEditing ? (
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => saveEdit(row.id)}
+                            onClick={() => saveEdit(row)}
                             disabled={saving}
                             className="rounded-md bg-emerald-500 p-1.5 text-white transition hover:bg-emerald-400 disabled:opacity-50"
                             title="Guardar"
@@ -178,7 +262,7 @@ export const AntennaMapping = () => {
               {antennas.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={8}
                     className="px-3 py-6 text-center text-slate-500 dark:text-slate-400"
                   >
                     No hay antenas configuradas. Ejecuta el script SQL en
