@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Moon, Sun, Wifi, WifiOff } from "lucide-react";
+import { LogOut, Moon, Sun, Wifi, WifiOff } from "lucide-react";
 import type { Theme } from "../../hooks/useTheme";
 import { formatTime } from "../../utils/formatters";
 
@@ -26,6 +26,8 @@ type HeaderProps = {
   onToggleTheme: () => void;
   timeZone: string;
   setTimeZone: (value: string) => void;
+  userEmail: string;
+  onSignOut: () => void;
 };
 
 export const Header = ({
@@ -33,7 +35,9 @@ export const Header = ({
   theme,
   onToggleTheme,
   timeZone,
-  setTimeZone
+  setTimeZone,
+  userEmail,
+  onSignOut
 }: HeaderProps) => {
   const [now, setNow] = useState(() => new Date());
 
@@ -115,6 +119,15 @@ export const Header = ({
               {formatTime(now.toISOString(), timeZone)}
             </p>
           </div>
+          <button
+            type="button"
+            onClick={onSignOut}
+            title={`Cerrar sesión (${userEmail})`}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 transition-all duration-300 hover:border-red-400 hover:text-red-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Salir</span>
+          </button>
         </div>
       </div>
     </header>

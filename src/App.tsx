@@ -37,7 +37,12 @@ const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "mapping", label: "Mapeo de antenas", icon: Settings2 }
 ];
 
-export default function App() {
+type AppProps = {
+  userEmail: string;
+  onSignOut: () => void;
+};
+
+export default function App({ userEmail, onSignOut }: AppProps) {
   const { events, isConnected, isPaused, togglePause } = useRFIDStream();
   const { exportToExcel } = useExport();
   const { theme, toggleTheme } = useTheme();
@@ -70,6 +75,8 @@ export default function App() {
         onToggleTheme={toggleTheme}
         timeZone={timeZone}
         setTimeZone={setTimeZone}
+        userEmail={userEmail}
+        onSignOut={onSignOut}
       />
 
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 pb-12">
