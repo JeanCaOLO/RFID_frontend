@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   AlertTriangle,
+  History,
   MonitorSmartphone,
   Search,
   X
 } from "lucide-react";
+import { supabase } from "../../lib/supabase";
 import type { RFIDTagEvent } from "../../types/rfid.types";
 import { formatTime } from "../../utils/formatters";
 
@@ -14,33 +16,132 @@ type MonitorViewProps = {
   timeZone: string;
 };
 
-type StatusFilter = "all" | "ok" | "error";
+// ok = verde, repeat = amarillo (el pallet ya fue procesado antes),
+// error = rojo (cualquier otro rechazo del WMS).
+type ReadKind = "ok" | "repeat" | "error";
+type StatusFilter = "all" | ReadKind;
 
 const POPUP_MS = 4000;
-const ANTENNAS = [1, 2, 3, 4];
+const DOCK_STORAGE_KEY = "monitor.dock";
+
+// Mensajes del WMS que indican que el pallet ya se leyó/procesó antes.
+// Si el WMS usa otro texto para ese caso, agregarlo aquí.
+const REPEAT_PATTERNS = [
+  /ya se encuentra dado de baja/i,
+  /ya (fue|ha sido) le[ií]do/i
+];
+
+const classify = (event: RFIDTagEvent): ReadKind => {
+  if (event.isValid) return "ok";
+  const reason = event.reason ?? "";
+  return REPEAT_PATTERNS.some((re) => re.test(reason)) ? "repeat" : "error";
+};
+
+const KIND_STYLE: Record<
+  ReadKind,
+  { label: string; text: string; row: string; popup: string; chip: string }
+> = {
+  ok: {
+    label: "OK",
+    text: "text-emerald-500",
+    row: "",
+    popup: "bg-emerald-600",
+    chip: "bg-emerald-500 text-white"
+  },
+  repeat: {
+    label: "Ya leído",
+    text: "text-amber-500",
+    row: "bg-amber-400/15",
+    popup: "bg-amber-500",
+    chip: "bg-amber-500 text-white"
+  },
+  error: {
+    label: "Error",
+    text: "text-red-500",
+    row: "bg-red-500/10",
+    popup: "bg-red-600",
+    chip: "bg-red-500 text-white"
+  }
+};
+
+const KindIcon = ({ kind, className }: { kind: ReadKind; className: string }) =>
+  kind === "ok" ? (
+    <CheckCircle2 className={className} />
+  ) : kind === "repeat" ? (
+    <History className={className} />
+  ) : (
+    <AlertTriangle className={className} />
+  );
+
+const readStoredDock = () => {
+  try {
+    return window.localStorage.getItem(DOCK_STORAGE_KEY) ?? "all";
+  } catch {
+    return "all";
+  }
+};
 
 /**
  * Vista operativa "Monitor".
  *
- * Muestra las lecturas que van pasando por las antenas (igual que el registro
- * del dashboard: si el pallet pasa o no, con el motivo) y, ante cada lectura
- * nueva, lanza un pop-up grande:
- *   - Verde: pallet OK, con puerta y antena por la que pasó.
- *   - Rojo: pallet rechazado, con el error tal cual devuelve el WMS.
+ * Muestra las lecturas que van pasando por las antenas y, ante cada lectura
+ * nueva, lanza un pop-up grande: verde (OK), amarillo (pallet ya leído antes)
+ * o rojo (rechazado, con el error tal cual devuelve el WMS).
+ *
+ * Con un andén seleccionado, tabla y pop-up muestran solo lo que pasa por ese
+ * andén; la selección se recuerda en este equipo (pantalla fija por andén).
  */
 export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
   const [popup, setPopup] = useState<RFIDTagEvent | null>(null);
   const [palletFilter, setPalletFilter] = useState("");
   const [reasonFilter, setReasonFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [antennaFilter, setAntennaFilter] = useState<number | "all">("all");
+  const [dockFilter, setDockFilter] = useState<string>(readStoredDock);
+  const [configuredDocks, setConfiguredDocks] = useState<string[]>([]);
   const lastKeyRef = useRef<string | null>(null);
   const timerRef = useRef<number | null>(null);
 
-  // Detecta la lectura más reciente y dispara el pop-up.
+  // Andenes configurados en el mapeo de antenas (aunque aún no tengan lecturas).
   useEffect(() => {
-    if (!events.length) return;
-    const latest = events[0];
+    supabase
+      .from("antennas")
+      .select("dock_door")
+      .then(({ data }) => {
+        setConfiguredDocks(
+          (data ?? [])
+            .map((row) => row.dock_door as string | null)
+            .filter((d): d is string => !!d)
+        );
+      });
+  }, []);
+
+  const docks = useMemo(() => {
+    const all = new Set(configuredDocks);
+    events.forEach((e) => e.dockDoor && all.add(e.dockDoor));
+    if (dockFilter !== "all") all.add(dockFilter);
+    return Array.from(all).sort((a, b) =>
+      a.localeCompare(b, "es", { numeric: true })
+    );
+  }, [configuredDocks, events, dockFilter]);
+
+  const changeDock = (value: string) => {
+    // Al cambiar de andén no se muestra pop-up de lecturas ya existentes.
+    lastKeyRef.current = null;
+    setPopup(null);
+    setDockFilter(value);
+    try {
+      window.localStorage.setItem(DOCK_STORAGE_KEY, value);
+    } catch {
+      // Sin almacenamiento local: el filtro funciona igual, solo no se recuerda.
+    }
+  };
+
+  // Detecta la lectura más reciente del andén seleccionado y dispara el pop-up.
+  useEffect(() => {
+    const latest = events.find(
+      (e) => dockFilter === "all" || e.dockDoor === dockFilter
+    );
+    if (!latest) return;
     const key = `${latest.epc}-${latest.timestamp}`;
     if (lastKeyRef.current === null) {
       // Primera carga: no mostramos pop-up del histórico.
@@ -54,7 +155,7 @@ export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
 
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => setPopup(null), POPUP_MS);
-  }, [events]);
+  }, [events, dockFilter]);
 
   useEffect(() => {
     return () => {
@@ -68,11 +169,7 @@ export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
     return events
       .filter((event) => {
         const statusMatch =
-          statusFilter === "all"
-            ? true
-            : statusFilter === "ok"
-            ? event.isValid
-            : !event.isValid;
+          statusFilter === "all" ? true : classify(event) === statusFilter;
         const reasonMatch = reasonTerm
           ? (event.reason ?? "").toLowerCase().includes(reasonTerm)
           : true;
@@ -80,12 +177,12 @@ export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
           ? (event.pallet ?? "").toLowerCase().includes(palletTerm) ||
             event.epc.toLowerCase().includes(palletTerm)
           : true;
-        const antennaMatch =
-          antennaFilter === "all" ? true : event.antenna === antennaFilter;
-        return statusMatch && reasonMatch && palletMatch && antennaMatch;
+        const dockMatch =
+          dockFilter === "all" ? true : event.dockDoor === dockFilter;
+        return statusMatch && reasonMatch && palletMatch && dockMatch;
       })
       .slice(0, 40);
-  }, [events, palletFilter, reasonFilter, statusFilter, antennaFilter]);
+  }, [events, palletFilter, reasonFilter, statusFilter, dockFilter]);
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-slate-700 dark:bg-slate-800">
@@ -95,9 +192,28 @@ export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
           <h3 className="text-sm font-semibold uppercase tracking-[0.25em] text-slate-900 dark:text-sky-300">
             Monitor operativo
           </h3>
+          {dockFilter !== "all" && (
+            <span className="rounded-full bg-sky-500 px-3 py-0.5 text-xs font-bold text-white">
+              {dockFilter}
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Andén: con uno seleccionado, solo se ve lo que pasa por él */}
+          <select
+            value={dockFilter}
+            onChange={(e) => changeDock(e.target.value)}
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-sky-500/50 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200"
+          >
+            <option value="all">Todos los andenes</option>
+            {docks.map((dock) => (
+              <option key={dock} value={dock}>
+                {dock}
+              </option>
+            ))}
+          </select>
+
           {/* Buscador por pallet (o EPC) */}
           <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900/60">
             <Search className="h-4 w-4 text-slate-400" />
@@ -138,30 +254,13 @@ export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
             )}
           </div>
 
-          {/* Filtro por antena */}
-          <select
-            value={antennaFilter}
-            onChange={(e) =>
-              setAntennaFilter(
-                e.target.value === "all" ? "all" : Number(e.target.value)
-              )
-            }
-            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-sky-500/50 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-200"
-          >
-            <option value="all">Todas las antenas</option>
-            {ANTENNAS.map((ant) => (
-              <option key={ant} value={ant}>
-                Antena {ant}
-              </option>
-            ))}
-          </select>
-
           {/* Filtro rápido por estado */}
           <div className="inline-flex rounded-full border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-900/60">
             {(
               [
                 { id: "all", label: "Todos" },
                 { id: "ok", label: "OK" },
+                { id: "repeat", label: "Ya leído" },
                 { id: "error", label: "Error" }
               ] as { id: StatusFilter; label: string }[]
             ).map((opt) => (
@@ -170,11 +269,9 @@ export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
                 onClick={() => setStatusFilter(opt.id)}
                 className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                   statusFilter === opt.id
-                    ? opt.id === "error"
-                      ? "bg-red-500 text-white"
-                      : opt.id === "ok"
-                      ? "bg-emerald-500 text-white"
-                      : "bg-sky-500 text-white"
+                    ? opt.id === "all"
+                      ? "bg-sky-500 text-white"
+                      : KIND_STYLE[opt.id].chip
                     : "text-slate-600 dark:text-slate-300"
                 }`}
               >
@@ -199,34 +296,24 @@ export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
           </thead>
           <tbody>
             {recent.map((event, index) => {
-              const isError = !event.isValid;
+              const kind = classify(event);
+              const style = KIND_STYLE[kind];
               return (
                 <tr
                   key={`${event.epc}-${event.timestamp}-${index}`}
-                  className={`border-t border-slate-200/70 dark:border-slate-700/60 ${
-                    isError ? "bg-red-500/10" : ""
-                  }`}
+                  className={`border-t border-slate-200/70 dark:border-slate-700/60 ${style.row}`}
                 >
                   <td className="px-3 py-3">
-                    {!isError ? (
-                      <div className="flex items-center gap-2 text-emerald-500">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span className="text-xs font-semibold uppercase tracking-wider">
-                          OK
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-red-500">
-                        <AlertTriangle className="h-4 w-4" />
-                        <span className="text-xs font-bold uppercase tracking-wider">
-                          Error
-                        </span>
-                      </div>
-                    )}
+                    <div className={`flex items-center gap-2 ${style.text}`}>
+                      <KindIcon kind={kind} className="h-4 w-4" />
+                      <span className="text-xs font-bold uppercase tracking-wider">
+                        {style.label}
+                      </span>
+                    </div>
                   </td>
                   <td
                     className={`px-3 py-3 font-semibold ${
-                      isError ? "text-red-400" : "text-primary"
+                      kind === "ok" ? "text-primary" : style.text
                     }`}
                   >
                     <div className="flex flex-col">
@@ -241,17 +328,25 @@ export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
                     <span className="text-slate-400"> · Ant {event.antenna}</span>
                   </td>
                   <td className="px-3 py-3">
-                    <span className={isError ? "text-red-400 line-through opacity-80" : "text-primary"}>
+                    <span
+                      className={
+                        kind === "error"
+                          ? "text-red-400 line-through opacity-80"
+                          : kind === "repeat"
+                          ? style.text
+                          : "text-primary"
+                      }
+                    >
                       {event.dockDoor ?? "—"}
                     </span>
                   </td>
                   <td className="px-3 py-3">
                     <span
-                      className={
-                        isError
-                          ? "text-xs text-red-400"
-                          : "text-xs text-slate-500 dark:text-slate-400"
-                      }
+                      className={`text-xs ${
+                        kind === "ok"
+                          ? "text-slate-500 dark:text-slate-400"
+                          : style.text
+                      }`}
                     >
                       {event.reason ?? "—"}
                     </span>
@@ -268,11 +363,10 @@ export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
                   colSpan={6}
                   className="px-3 py-12 text-center text-slate-500 dark:text-slate-400"
                 >
-                  {palletFilter ||
-                  reasonFilter ||
-                  statusFilter !== "all" ||
-                  antennaFilter !== "all"
+                  {palletFilter || reasonFilter || statusFilter !== "all"
                     ? "Ninguna lectura coincide con el filtro."
+                    : dockFilter !== "all"
+                    ? `Esperando lecturas en ${dockFilter}…`
                     : "Esperando lecturas de las antenas…"}
                 </td>
               </tr>
@@ -291,15 +385,19 @@ type MonitorPopupProps = {
   onClose: () => void;
 };
 
+const POPUP_TITLE: Record<ReadKind, string> = {
+  ok: "Lectura correcta",
+  repeat: "Pallet ya leído",
+  error: "Lectura rechazada"
+};
+
 const MonitorPopup = ({ event, onClose }: MonitorPopupProps) => {
-  const isError = !event.isValid;
+  const kind = classify(event);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
       <div
-        className={`relative w-full max-w-xl overflow-hidden rounded-3xl p-10 text-white shadow-2xl ${
-          isError ? "bg-red-600" : "bg-emerald-600"
-        } animate-in`}
+        className={`relative w-full max-w-xl overflow-hidden rounded-3xl p-10 text-white shadow-2xl ${KIND_STYLE[kind].popup} animate-in`}
         role="alert"
       >
         <button
@@ -311,25 +409,22 @@ const MonitorPopup = ({ event, onClose }: MonitorPopupProps) => {
         </button>
 
         <div className="flex flex-col items-center gap-4 text-center">
-          {isError ? (
-            <AlertTriangle className="h-20 w-20" />
-          ) : (
-            <CheckCircle2 className="h-20 w-20" />
-          )}
+          <KindIcon kind={kind} className="h-20 w-20" />
 
           <p className="text-sm font-semibold uppercase tracking-[0.3em] opacity-90">
-            {isError ? "Lectura rechazada" : "Lectura correcta"}
+            {POPUP_TITLE[kind]}
           </p>
 
           <p className="text-5xl font-black tracking-tight">
             {event.pallet ?? event.epc}
           </p>
 
-          {isError ? (
+          {kind !== "ok" && (
             <p className="max-w-md text-lg font-medium opacity-95">
               {event.reason ?? "Rechazado por el WMS"}
             </p>
-          ) : (
+          )}
+          {kind !== "error" && (
             <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-lg font-medium opacity-95">
               <span>
                 Puerta:{" "}
