@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   LayoutDashboard,
@@ -52,6 +52,31 @@ export default function App({ userEmail, onSignOut }: AppProps) {
   const [antennaFilter, setAntennaFilter] = useState<number | "all">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [minRssiFilter, setMinRssiFilter] = useState<number | "all">("all");
+  const [isFullscreen, setIsFullscreen] = useState(
+    () => !!document.fullscreenElement
+  );
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  // El navegador solo permite pantalla completa desde un clic del usuario,
+  // por eso se pide en el clic de la pestaña y no en un efecto.
+  const toggleFullscreen = () => {
+    const request = document.fullscreenElement
+      ? document.exitFullscreen()
+      : document.documentElement.requestFullscreen?.();
+    request?.catch(() => {
+      // Navegador sin soporte o bloqueado: la vista sigue funcionando normal.
+    });
+  };
+
+  const selectTab = (id: Tab) => {
+    setTab(id);
+    if (id === "monitor" && !document.fullscreenElement) toggleFullscreen();
+  };
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
@@ -66,6 +91,24 @@ export default function App({ userEmail, onSignOut }: AppProps) {
       return antennaMatch && searchMatch && rssiMatch;
     });
   }, [events, antennaFilter, searchTerm, minRssiFilter]);
+
+  // Monitor en pantalla completa: solo el monitor, sin encabezado ni pestañas.
+  // Esc sale de pantalla completa y vuelve a la vista normal.
+  if (tab === "monitor" && isFullscreen) {
+    return (
+      <div className="flex h-screen flex-col gap-3 bg-slate-100 p-4 text-slate-900 transition-colors duration-300 dark:bg-slate-900 dark:text-slate-50">
+        <ReaderAlertBanner issues={readerStatus.issues} />
+        <div className="min-h-0 flex-1">
+          <MonitorView
+            events={events}
+            timeZone={timeZone}
+            isFullscreen
+            onToggleFullscreen={toggleFullscreen}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 transition-colors duration-300 dark:bg-slate-900 dark:text-slate-50">
@@ -86,7 +129,7 @@ export default function App({ userEmail, onSignOut }: AppProps) {
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setTab(id)}
+              onClick={() => selectTab(id)}
               className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
                 tab === id
                   ? "bg-sky-500 text-white shadow-glow"
@@ -137,7 +180,12 @@ export default function App({ userEmail, onSignOut }: AppProps) {
           </>
         ) : tab === "monitor" ? (
           <div className="mt-2">
-            <MonitorView events={events} timeZone={timeZone} />
+            <MonitorView
+              events={events}
+              timeZone={timeZone}
+              isFullscreen={false}
+              onToggleFullscreen={toggleFullscreen}
+            />
           </div>
         ) : tab === "truck" ? (
           <div className="mt-2">

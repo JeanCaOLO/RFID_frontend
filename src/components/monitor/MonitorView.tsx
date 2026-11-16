@@ -3,6 +3,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   History,
+  Maximize2,
+  Minimize2,
   MonitorSmartphone,
   Search,
   X
@@ -14,6 +16,8 @@ import { formatTime } from "../../utils/formatters";
 type MonitorViewProps = {
   events: RFIDTagEvent[];
   timeZone: string;
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
 };
 
 // ok = verde, repeat = amarillo (el pallet ya fue procesado antes),
@@ -91,7 +95,12 @@ const readStoredDock = () => {
  * Con un andén seleccionado, tabla y pop-up muestran solo lo que pasa por ese
  * andén; la selección se recuerda en este equipo (pantalla fija por andén).
  */
-export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
+export const MonitorView = ({
+  events,
+  timeZone,
+  isFullscreen,
+  onToggleFullscreen
+}: MonitorViewProps) => {
   const [popup, setPopup] = useState<RFIDTagEvent | null>(null);
   const [palletFilter, setPalletFilter] = useState("");
   const [reasonFilter, setReasonFilter] = useState("");
@@ -185,7 +194,11 @@ export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
   }, [events, palletFilter, reasonFilter, statusFilter, dockFilter]);
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-slate-700 dark:bg-slate-800">
+    <section
+      className={`rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-colors duration-300 dark:border-slate-700 dark:bg-slate-800 ${
+        isFullscreen ? "flex h-full flex-col" : ""
+      }`}
+    >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <MonitorSmartphone className="h-5 w-5 text-sky-500" />
@@ -279,10 +292,33 @@ export const MonitorView = ({ events, timeZone }: MonitorViewProps) => {
               </button>
             ))}
           </div>
+
+          <button
+            onClick={onToggleFullscreen}
+            title={
+              isFullscreen
+                ? "Salir de pantalla completa (Esc)"
+                : "Pantalla completa"
+            }
+            aria-label={
+              isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"
+            }
+            className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-slate-600 transition hover:text-sky-500 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300"
+          >
+            {isFullscreen ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
+          </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div
+        className={
+          isFullscreen ? "min-h-0 flex-1 overflow-auto" : "overflow-x-auto"
+        }
+      >
         <table className="w-full text-left text-sm">
           <thead className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
             <tr>
