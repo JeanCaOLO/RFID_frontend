@@ -14,6 +14,7 @@ import { LiveMetricsDashboard } from "./components/charts/LiveMetricsDashboard";
 import { AntennaMapping } from "./components/mapping/AntennaMapping";
 import { ReportsView } from "./components/reports/ReportsView";
 import { MonitorView } from "./components/monitor/MonitorView";
+import { WmsEnvSwitch } from "./components/layout/WmsEnvSwitch";
 import { TruckLoad } from "./components/truck/TruckLoad";
 import {
   ReaderAlertBanner,
@@ -22,7 +23,6 @@ import {
 import { useRFIDStream } from "./hooks/useRFIDStream";
 import { useReaderStatus } from "./hooks/useReaderStatus";
 import { useExport } from "./hooks/useExport";
-import { useTheme } from "./hooks/useTheme";
 import { useTimeZone } from "./hooks/useTimeZone";
 
 const ANTENNAS = [1, 2, 3, 4];
@@ -34,7 +34,7 @@ const TABS: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
   { id: "monitor", label: "Monitor", icon: MonitorSmartphone },
   { id: "truck", label: "Carga Camión", icon: Truck },
   { id: "reports", label: "Reportes", icon: BarChart3 },
-  { id: "mapping", label: "Mapeo de antenas", icon: Settings2 }
+  { id: "mapping", label: "Configuración", icon: Settings2 }
 ];
 
 type AppProps = {
@@ -45,7 +45,6 @@ type AppProps = {
 export default function App({ userEmail, onSignOut }: AppProps) {
   const { events, isConnected, isPaused, togglePause } = useRFIDStream();
   const { exportToExcel } = useExport();
-  const { theme, toggleTheme } = useTheme();
   const { timeZone, setTimeZone } = useTimeZone();
   const readerStatus = useReaderStatus();
   const [tab, setTab] = useState<Tab>("dashboard");
@@ -114,8 +113,6 @@ export default function App({ userEmail, onSignOut }: AppProps) {
     <div className="min-h-screen bg-slate-100 text-slate-900 transition-colors duration-300 dark:bg-slate-900 dark:text-slate-50">
       <Header
         isConnected={isConnected}
-        theme={theme}
-        onToggleTheme={toggleTheme}
         timeZone={timeZone}
         setTimeZone={setTimeZone}
         userEmail={userEmail}
@@ -196,7 +193,8 @@ export default function App({ userEmail, onSignOut }: AppProps) {
             <ReportsView timeZone={timeZone} />
           </div>
         ) : (
-          <div className="mt-2">
+          <div className="mt-2 flex flex-col gap-6">
+            <WmsEnvSwitch userEmail={userEmail} />
             <AntennaMapping />
           </div>
         )}

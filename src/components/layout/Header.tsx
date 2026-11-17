@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
-import { LogOut, Moon, Sun, Wifi, WifiOff } from "lucide-react";
-import type { Theme } from "../../hooks/useTheme";
+import { LogOut, Wifi, WifiOff } from "lucide-react";
 import { formatTime } from "../../utils/formatters";
-import { WmsEnvSwitch } from "./WmsEnvSwitch";
 
 // Zona del navegador (para ofrecer la opción "Hora local del dispositivo").
 const BROWSER_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -23,8 +21,6 @@ const TIME_ZONE_OPTIONS = [
 
 type HeaderProps = {
   isConnected: boolean;
-  theme: Theme;
-  onToggleTheme: () => void;
   timeZone: string;
   setTimeZone: (value: string) => void;
   userEmail: string;
@@ -33,8 +29,6 @@ type HeaderProps = {
 
 export const Header = ({
   isConnected,
-  theme,
-  onToggleTheme,
   timeZone,
   setTimeZone,
   userEmail,
@@ -57,7 +51,6 @@ export const Header = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          <WmsEnvSwitch userEmail={userEmail} />
           <div
             className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
               isConnected
@@ -73,22 +66,6 @@ export const Header = ({
             {isConnected ? "Conectado" : "Desconectado"}
             <span className="h-2 w-2 rounded-full bg-current animate-pulse-soft" />
           </div>
-          <button
-            type="button"
-            onClick={onToggleTheme}
-            aria-label="Cambiar tema"
-            title="Cambiar tema"
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 transition-all duration-300 hover:border-sky-400 hover:text-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-          >
-            {theme === "dark" ? (
-              <Sun className="h-4 w-4" />
-            ) : (
-              <Moon className="h-4 w-4" />
-            )}
-            <span className="hidden sm:inline">
-              {theme === "dark" ? "Modo claro" : "Modo oscuro"}
-            </span>
-          </button>
           <div className="flex items-center gap-2">
             <label
               htmlFor="timezone-switcher"
