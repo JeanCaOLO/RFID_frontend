@@ -125,4 +125,9 @@ export type AppSettingsRow = {
   wms_env_error: string | null;
   updated_at: string;
   updated_by: string | null;
+  // Lo reporta el backend al arrancar (migration_backend_info.sql).
+  backend_version?: string | null;
+  backend_host?: string | null;
+  backend_started_at?: string | null;
+  backend_problem?: string | null;
 };

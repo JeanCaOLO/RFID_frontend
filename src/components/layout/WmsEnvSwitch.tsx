@@ -6,6 +6,18 @@ import type { WmsEnv } from "../../types/rfid.types";
 // Si el backend no confirma el cambio en este tiempo, se avisa en vez de girar.
 const CONFIRM_TIMEOUT_MS = 20_000;
 
+// Versión del backend que espera esta pantalla (BACKEND_VERSION en main.py).
+// Subirla junto con la del backend cuando un cambio necesite ambos.
+const EXPECTED_BACKEND_VERSION = "2026-11-17.2";
+
+const formatDateTime = (iso: string) =>
+  new Date(iso).toLocaleString("es-CR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
 const ENV_LABEL: Record<WmsEnv, string> = { qa: "QA", prod: "Producción" };
 
 const OPTIONS: { id: WmsEnv; active: string }[] = [
@@ -83,6 +95,37 @@ export const WmsEnvSwitch = ({ userEmail }: { userEmail: string }) => {
     };
   }
 
+  // Qué backend está corriendo: versión, equipo y si se copió completo.
+  let backend: { tone: string; text: string } | null = null;
+  if (settings) {
+    const version = settings.backend_version;
+    if (settings.backend_problem) {
+      backend = { tone: "text-red-400", text: settings.backend_problem };
+    } else if (!version) {
+      backend = {
+        tone: "text-amber-400",
+        text:
+          `El backend no ha reportado su versión: corre una versión anterior a ` +
+          `${EXPECTED_BACKEND_VERSION} (copiar los archivos nuevos al NAS y ` +
+          `reconstruir) o falta ejecutar migration_backend_info.sql.`
+      };
+    } else if (version !== EXPECTED_BACKEND_VERSION) {
+      backend = {
+        tone: "text-amber-400",
+        text: `El backend corre la versión ${version}; esta pantalla espera la ${EXPECTED_BACKEND_VERSION}. Copia los archivos nuevos al NAS.`
+      };
+    } else {
+      backend = {
+        tone: "text-slate-400",
+        text:
+          `Backend ${version} en ${settings.backend_host ?? "equipo desconocido"}` +
+          (settings.backend_started_at
+            ? ` · iniciado ${formatDateTime(settings.backend_started_at)}`
+            : "")
+      };
+    }
+  }
+
   return (
     <section
       className={`rounded-2xl border bg-white p-6 shadow-sm dark:bg-slate-800 ${
@@ -133,6 +176,12 @@ export const WmsEnvSwitch = ({ userEmail }: { userEmail: string }) => {
           </span>
         )}
       </div>
+
+      {backend && (
+        <p className={`mt-2 border-t border-slate-200 pt-2 text-xs dark:border-slate-700 ${backend.tone}`}>
+          {backend.text}
+        </p>
+      )}
     </section>
   );
 };
