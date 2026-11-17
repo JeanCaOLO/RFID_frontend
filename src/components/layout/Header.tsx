@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { LogOut, Moon, Sun, Wifi, WifiOff } from "lucide-react";
 import type { Theme } from "../../hooks/useTheme";
 import { formatTime } from "../../utils/formatters";
+import { WmsEnvSwitch } from "./WmsEnvSwitch";
 
 // Zona del navegador (para ofrecer la opción "Hora local del dispositivo").
 const BROWSER_TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -55,7 +56,8 @@ export const Header = ({
           </h1>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <WmsEnvSwitch userEmail={userEmail} />
           <div
             className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
               isConnected

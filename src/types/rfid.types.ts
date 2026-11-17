@@ -113,3 +113,16 @@ export type TruckLoadHistoryEntry = {
   doors: string[];
   firstLoadedAt: string;
 };
+
+// Ambiente del WMS contra el que valida el backend (tabla `app_settings`).
+export type WmsEnv = "qa" | "prod";
+
+export type AppSettingsRow = {
+  id: number;
+  wms_env: WmsEnv; // pedido desde el frontend
+  wms_env_applied: WmsEnv | null; // el que usa el backend de verdad
+  wms_env_applied_at: string | null;
+  wms_env_error: string | null;
+  updated_at: string;
+  updated_by: string | null;
+};
