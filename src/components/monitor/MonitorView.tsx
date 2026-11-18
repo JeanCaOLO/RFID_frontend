@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
   AlertTriangle,
-  History,
   Maximize2,
   Minimize2,
   MonitorSmartphone,
@@ -20,9 +19,8 @@ type MonitorViewProps = {
   onToggleFullscreen: () => void;
 };
 
-// ok = verde, repeat = amarillo (el pallet ya fue procesado antes),
-// error = rojo (cualquier otro rechazo del WMS).
-type ReadKind = "ok" | "repeat" | "error";
+// ok = verde, error = rojo (rechazo del WMS, p. ej. andén equivocado).
+type ReadKind = "ok" | "error";
 type StatusFilter = "all" | ReadKind;
 
 const POPUP_MS = 4000;
@@ -35,11 +33,15 @@ const REPEAT_PATTERNS = [
   /ya (fue|ha sido) le[ií]do/i
 ];
 
-const classify = (event: RFIDTagEvent): ReadKind => {
-  if (event.isValid) return "ok";
-  const reason = event.reason ?? "";
-  return REPEAT_PATTERNS.some((re) => re.test(reason)) ? "repeat" : "error";
-};
+// Un pallet correcto se sigue leyendo mientras pasa por la antena, y esas
+// lecturas extra vuelven del WMS como "ya leído". El Monitor las oculta: solo
+// muestra las lecturas OK y los errores reales (andén equivocado, etc.).
+const isRepeat = (event: RFIDTagEvent) =>
+  !event.isValid &&
+  REPEAT_PATTERNS.some((re) => re.test(event.reason ?? ""));
+
+const classify = (event: RFIDTagEvent): ReadKind =>
+  event.isValid ? "ok" : "error";
 
 const KIND_STYLE: Record<
   ReadKind,
@@ -51,13 +53,6 @@ const KIND_STYLE: Record<
     row: "",
     popup: "bg-emerald-600",
     chip: "bg-emerald-500 text-white"
-  },
-  repeat: {
-    label: "Ya leído",
-    text: "text-amber-500",
-    row: "bg-amber-400/15",
-    popup: "bg-amber-500",
-    chip: "bg-amber-500 text-white"
   },
   error: {
     label: "Error",
@@ -71,8 +66,6 @@ const KIND_STYLE: Record<
 const KindIcon = ({ kind, className }: { kind: ReadKind; className: string }) =>
   kind === "ok" ? (
     <CheckCircle2 className={className} />
-  ) : kind === "repeat" ? (
-    <History className={className} />
   ) : (
     <AlertTriangle className={className} />
   );
@@ -89,8 +82,8 @@ const readStoredDock = () => {
  * Vista operativa "Monitor".
  *
  * Muestra las lecturas que van pasando por las antenas y, ante cada lectura
- * nueva, lanza un pop-up grande: verde (OK), amarillo (pallet ya leído antes)
- * o rojo (rechazado, con el error tal cual devuelve el WMS).
+ * nueva, lanza un pop-up grande: verde (OK) o rojo (rechazado, con el error
+ * tal cual devuelve el WMS). Las lecturas "ya leído" no se muestran.
  *
  * Con un andén seleccionado, tabla y pop-up muestran solo lo que pasa por ese
  * andén; la selección se recuerda en este equipo (pantalla fija por andén).
@@ -109,6 +102,12 @@ export const MonitorView = ({
   const [configuredDocks, setConfiguredDocks] = useState<string[]>([]);
   const lastKeyRef = useRef<string | null>(null);
   const timerRef = useRef<number | null>(null);
+
+  // Lecturas que se muestran: sin los "ya leído".
+  const visibleEvents = useMemo(
+    () => events.filter((e) => !isRepeat(e)),
+    [events]
+  );
 
   // Andenes configurados en el mapeo de antenas (aunque aún no tengan lecturas).
   useEffect(() => {
@@ -147,7 +146,7 @@ export const MonitorView = ({
 
   // Detecta la lectura más reciente del andén seleccionado y dispara el pop-up.
   useEffect(() => {
-    const latest = events.find(
+    const latest = visibleEvents.find(
       (e) => dockFilter === "all" || e.dockDoor === dockFilter
     );
     if (!latest) return;
@@ -164,7 +163,7 @@ export const MonitorView = ({
 
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => setPopup(null), POPUP_MS);
-  }, [events, dockFilter]);
+  }, [visibleEvents, dockFilter]);
 
   useEffect(() => {
     return () => {
@@ -175,7 +174,7 @@ export const MonitorView = ({
   const recent = useMemo(() => {
     const reasonTerm = reasonFilter.trim().toLowerCase();
     const palletTerm = palletFilter.trim().toLowerCase();
-    return events
+    return visibleEvents
       .filter((event) => {
         const statusMatch =
           statusFilter === "all" ? true : classify(event) === statusFilter;
@@ -191,7 +190,7 @@ export const MonitorView = ({
         return statusMatch && reasonMatch && palletMatch && dockMatch;
       })
       .slice(0, 40);
-  }, [events, palletFilter, reasonFilter, statusFilter, dockFilter]);
+  }, [visibleEvents, palletFilter, reasonFilter, statusFilter, dockFilter]);
 
   return (
     <section
@@ -273,7 +272,6 @@ export const MonitorView = ({
               [
                 { id: "all", label: "Todos" },
                 { id: "ok", label: "OK" },
-                { id: "repeat", label: "Ya leído" },
                 { id: "error", label: "Error" }
               ] as { id: StatusFilter; label: string }[]
             ).map((opt) => (
@@ -368,8 +366,6 @@ export const MonitorView = ({
                       className={
                         kind === "error"
                           ? "text-red-400 line-through opacity-80"
-                          : kind === "repeat"
-                          ? style.text
                           : "text-primary"
                       }
                     >
@@ -423,7 +419,6 @@ type MonitorPopupProps = {
 
 const POPUP_TITLE: Record<ReadKind, string> = {
   ok: "Lectura correcta",
-  repeat: "Pallet ya leído",
   error: "Lectura rechazada"
 };
 
@@ -460,7 +455,7 @@ const MonitorPopup = ({ event, onClose }: MonitorPopupProps) => {
               {event.reason ?? "Rechazado por el WMS"}
             </p>
           )}
-          {kind !== "error" && (
+          {kind === "ok" && (
             <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-lg font-medium opacity-95">
               <span>
                 Puerta:{" "}
